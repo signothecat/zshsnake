@@ -91,8 +91,8 @@ rand_dir() {
 init_snake() {
   local cx=$((GRID_W/2))
   local cy=$((GRID_H/2))
-  snake=( $(pos_key $((cx-1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx+1)) $cy) )
-  rand_dir
+  snake=( $(pos_key $((cx+1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx-1)) $cy) )
+  dx=-1; dy=0; want_dx=$dx; want_dy=$dy
   LAST_TAIL=""; LAST_HEAD=""
   NEED_REDRAW=1
   BORDERS_DRAWN=0
@@ -268,7 +268,7 @@ draw_borders() {
   move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border # right border with optional leading spaces
   done
   # bottom line: keybinding help moved here
-  move_to $((GRID_H+3)) 0; printf "%sKey: [p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0; printf "%s[p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
   BORDERS_DRAWN=1
 }
 
