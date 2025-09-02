@@ -122,7 +122,7 @@ read_input() {
       q|Q)
         clear_screen
         exit 0;;
-      p|P)
+      p|P|" ")
         if [[ $state == "PLAYING" ]]; then
           state="PAUSED"
           show_paused
@@ -191,7 +191,7 @@ draw_repeat() {
 }
 
 draw_borders() {
-  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit | p:Pause%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit | p/space:Pause%s" "$COLOR_TEXT" "$COLOR_RESET"
   move_to 1 0; printf "┌"; draw_repeat "─" "$GRID_PIX_W"; printf "┐"
   move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$GRID_PIX_W"; printf "┘"
   for (( y=0; y<GRID_H; y++ )); do
