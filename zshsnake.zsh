@@ -41,7 +41,10 @@ setup_term() {
   fi
 }
 
-on_exit() { restore_term; }
+on_exit() {
+  clear_screen
+  restore_term
+}
 trap on_exit EXIT INT TERM
 
 msleep() {
@@ -102,17 +105,19 @@ read_input() {
       if read -k 1 -s -t 0.0001 rest 2>/dev/null && [[ $rest == "[" ]]; then
         if read -k 1 -s -t 0.0001 rest 2>/dev/null; then
           case "$rest" in
-            A) set_want 0 -1;;
-            B) set_want 0 1;;
-            C) set_want 1 0;;
-            D) set_want -1 0;;
+            A) [[ $state == PLAYING ]] && set_want 0 -1;;
+            B) [[ $state == PLAYING ]] && set_want 0 1;;
+            C) [[ $state == PLAYING ]] && set_want 1 0;;
+            D) [[ $state == PLAYING ]] && set_want -1 0;;
           esac
         fi
       fi
       return
     fi
     case "$k" in
-      q|Q) exit 0;;
+      q|Q)
+        clear_screen
+        exit 0;;
       p|P)
         if [[ $state == "PLAYING" ]]; then
           state="PAUSED"
@@ -125,17 +130,17 @@ read_input() {
       s|S)
         if [[ $state == START_MENU ]]; then
           state="PLAYING"; init_snake; return
-        else
+        elif [[ $state == PLAYING ]]; then
           set_want 0 1
         fi
         ;;
-      w|W) set_want 0 -1;;
-      a|A) set_want -1 0;;
-      d|D) set_want 1 0;;
-      h|H) set_want -1 0;;
-      j|J) set_want 0 1;;
-      k|K) set_want 0 -1;;
-      l|L) set_want 1 0;;
+      w|W) [[ $state == PLAYING ]] && set_want 0 -1;;
+      a|A) [[ $state == PLAYING ]] && set_want -1 0;;
+      d|D) [[ $state == PLAYING ]] && set_want 1 0;;
+      h|H) [[ $state == PLAYING ]] && set_want -1 0;;
+      j|J) [[ $state == PLAYING ]] && set_want 0 1;;
+      k|K) [[ $state == PLAYING ]] && set_want 0 -1;;
+      l|L) [[ $state == PLAYING ]] && set_want 1 0;;
     esac
   fi
 }
