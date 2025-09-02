@@ -123,10 +123,22 @@ read_input() {
           clear_paused
           return
           ;;
+        b|B)
+          state="START_MENU"
+          clear_screen
+          draw_start
+          NEED_REDRAW=0
+          BORDERS_DRAWN=0
+          FIRST_STEP_DONE=0
+          return
+          ;;
+        r|R)
+          state="PLAYING"
+          init_snake
+          return
+          ;;
         $'\e')  # drain ESC sequence = allow
-          # 2byte目 (maybe '[')
           read -k 1 -s -t 0.02 rest  2>/dev/null || return
-          # 3byte目 (A/B/C/D etc.) by best-effort
           read -k 1 -s -t 0.02 third 2>/dev/null || true
           return
           ;;
@@ -161,6 +173,11 @@ read_input() {
           clear_paused
         fi
         ;;
+      r|R)
+        state="PLAYING"
+        init_snake
+        return
+        ;;
       s|S)
         if [[ $state == START_MENU ]]; then
           state="PLAYING"; init_snake; return
@@ -175,6 +192,16 @@ read_input() {
       j|J) [[ $state == PLAYING ]] && set_want 0 1;;
       k|K) [[ $state == PLAYING ]] && set_want 0 -1;;
       l|L) [[ $state == PLAYING ]] && set_want 1 0;;
+      b|B)
+        if [[ $state == "PLAYING" || $state == "PAUSED" ]]; then
+          state="START_MENU"
+          clear_screen
+          draw_start
+          NEED_REDRAW=0
+          BORDERS_DRAWN=0
+          FIRST_STEP_DONE=0
+        fi
+        ;;
     esac
   fi
 }
@@ -241,7 +268,7 @@ draw_borders() {
   move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border # right border with optional leading spaces
   done
   # bottom line: keybinding help moved here
-  move_to $((GRID_H+3)) 0; printf "%sKey: [p/space]Pause, [q]Quit %s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0; printf "%sKey: [p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
   BORDERS_DRAWN=1
 }
 
