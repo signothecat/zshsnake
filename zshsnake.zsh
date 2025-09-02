@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# zshsnake.zsh — prototype: Start screen + auto-move + direction change + pause support
+# zshsnake.zsh — prototype: Start screen + auto-move + direction change + pause toggle
 
 set -o errexit
 set -o nounset
@@ -59,7 +59,8 @@ pos_key() { printf "%d,%d" "$1" "$2"; }
 
 state="START_MENU"
 NEED_REDRAW=0
-LAST_TAIL="" LAST_HEAD=""
+BORDERS_DRAWN=0
+typeset -g LAST_TAIL="" LAST_HEAD=""
 typeset -a snake
 snake=()
 dx=1; dy=0
@@ -83,6 +84,7 @@ init_snake() {
   rand_dir
   LAST_TAIL=""; LAST_HEAD=""
   NEED_REDRAW=1
+  BORDERS_DRAWN=0
 }
 
 set_want() {
@@ -111,6 +113,15 @@ read_input() {
     fi
     case "$k" in
       q|Q) exit 0;;
+      p|P)
+        if [[ $state == "PLAYING" ]]; then
+          state="PAUSED"
+          show_paused
+        elif [[ $state == "PAUSED" ]]; then
+          state="PLAYING"
+          clear_paused
+        fi
+        ;;
       s|S)
         if [[ $state == START_MENU ]]; then
           state="PLAYING"; init_snake; return
@@ -125,13 +136,6 @@ read_input() {
       j|J) set_want 0 1;;
       k|K) set_want 0 -1;;
       l|L) set_want 1 0;;
-      p|P)
-        if [[ $state == PLAYING ]]; then
-          state="PAUSED"
-        elif [[ $state == PAUSED ]]; then
-          state="PLAYING"
-        fi
-        ;;
     esac
   fi
 }
@@ -176,18 +180,26 @@ draw_repeat() {
   printf "%s" "$s"
 }
 
-draw_play() {
-  clear_screen
-  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | p:Pause | q:Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+draw_borders() {
+  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit | p:Pause%s" "$COLOR_TEXT" "$COLOR_RESET"
   move_to 1 0; printf "┌"; draw_repeat "─" "$GRID_PIX_W"; printf "┐"
   move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$GRID_PIX_W"; printf "┘"
+  for (( y=0; y<GRID_H; y++ )); do
+    move_to $((2+y)) 0; printf "│"
+    move_to $((2+y)) $((1 + GRID_PIX_W)); printf "│"
+  done
+  BORDERS_DRAWN=1
+}
+
+draw_play() {
+  clear_screen
+  draw_borders
   typeset -A occ; occ=()
   local p
   for p in ${snake[@]}; do occ[$p]=1; done
   local y x key row col
   for (( y=0; y<GRID_H; y++ )); do
     row=$((2+y))
-    move_to $row 0; printf "│"
     for (( x=0; x<GRID_W; x++ )); do
       col=$((1 + x*CELL_W))
       key=$(pos_key $x $y)
@@ -198,12 +210,14 @@ draw_play() {
         printf "%s" "$EMPTY_CELL"
       fi
     done
-    move_to $row $((1 + GRID_PIX_W)); printf "│"
   done
   move_to $((GRID_H+3)) 0
 }
 
 draw_step() {
+  if (( ! BORDERS_DRAWN )); then
+    draw_borders
+  fi
   local tail=$1
   local head=$2
   local tx=${tail%%,*}
@@ -225,10 +239,12 @@ draw_start() {
   move_to $((row+2)) 0; printf "%s%s    %s%s\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
 }
 
-draw_paused() {
-  move_to $((GRID_H/2)) $((GRID_PIX_W/2 - 3))
-  printf "%s[PAUSED]%s" "$COLOR_TEXT" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
+show_paused() {
+  move_to $((GRID_H/2)) $((GRID_PIX_W/2 - 3)); printf "%sPAUSED%s" "$COLOR_TEXT" "$COLOR_RESET"
+}
+
+clear_paused() {
+  move_to $((GRID_H/2)) $((GRID_PIX_W/2 - 3)); printf "      "
 }
 
 main() {
@@ -250,7 +266,6 @@ main() {
         fi
         ;;
       PAUSED)
-        draw_paused
         ;;
     esac
     msleep "$TICK_MS"
