@@ -63,6 +63,7 @@ pos_key() { printf "%d,%d" "$1" "$2"; }
 state="START_MENU"
 NEED_REDRAW=0
 BORDERS_DRAWN=0
+FIRST_STEP_DONE=0
 typeset -g LAST_TAIL="" LAST_HEAD=""
 typeset -a snake
 snake=()
@@ -88,6 +89,7 @@ init_snake() {
   LAST_TAIL=""; LAST_HEAD=""
   NEED_REDRAW=1
   BORDERS_DRAWN=0
+  FIRST_STEP_DONE=0
 }
 
 set_want() {
@@ -95,7 +97,9 @@ set_want() {
   if (( ndx == -dx && ndy == -dy )); then
     return
   fi
-  want_dx=$ndx; want_dy=$ndy
+  if (( FIRST_STEP_DONE == 1 )); then
+    want_dx=$ndx; want_dy=$ndy
+  fi
 }
 
 read_input() {
@@ -158,6 +162,7 @@ step_snake() {
   snake=(${snake[@]:1})
   LAST_TAIL=$tail
   LAST_HEAD=$(pos_key $nx $ny)
+  FIRST_STEP_DONE=1
 }
 
 clear_screen() {
