@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# zshsnake.zsh — prototype: Start screen + auto-move + direction change (no food yet)
+# zshsnake.zsh — prototype: Start screen + auto-move + direction change + pause support
 
 set -o errexit
 set -o nounset
@@ -9,10 +9,8 @@ set -o pipefail
 GRID_W=30
 GRID_H=15
 CELL_W=${CELL_W:-2}
-# cell strings (empty and snake). SNAKE_CELL is a full cell with padding to CELL_W
 EMPTY_CELL="$(printf "%*s" "$CELL_W" "")"
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
-# total inner width in characters (without borders)
 GRID_PIX_W=$(( GRID_W * CELL_W ))
 TICK_MS=${SNAKE_TICK_MS:-100}
 
@@ -61,7 +59,7 @@ pos_key() { printf "%d,%d" "$1" "$2"; }
 
 state="START_MENU"
 NEED_REDRAW=0
-typeset -g LAST_TAIL="" LAST_HEAD=""
+LAST_TAIL="" LAST_HEAD=""
 typeset -a snake
 snake=()
 dx=1; dy=0
@@ -127,6 +125,13 @@ read_input() {
       j|J) set_want 0 1;;
       k|K) set_want 0 -1;;
       l|L) set_want 1 0;;
+      p|P)
+        if [[ $state == PLAYING ]]; then
+          state="PAUSED"
+        elif [[ $state == PAUSED ]]; then
+          state="PLAYING"
+        fi
+        ;;
     esac
   fi
 }
@@ -163,7 +168,6 @@ move_to() {
   fi
 }
 
-# repeat a single character N times
 draw_repeat() {
   local ch="$1" n=$2
   local s
@@ -172,28 +176,17 @@ draw_repeat() {
   printf "%s" "$s"
 }
 
-# draw header + border + grid
 draw_play() {
   clear_screen
-  # Header (row 0)
-  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
-
-  # Borders
-  # top border at row 1
+  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | p:Pause | q:Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
   move_to 1 0; printf "┌"; draw_repeat "─" "$GRID_PIX_W"; printf "┐"
-  # bottom border at row GRID_H+2
   move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$GRID_PIX_W"; printf "┘"
-
-  # Occupancy map
   typeset -A occ; occ=()
   local p
   for p in ${snake[@]}; do occ[$p]=1; done
-
-  # Grid body rows start at row=2, columns start at col=1 (inside borders)
   local y x key row col
   for (( y=0; y<GRID_H; y++ )); do
     row=$((2+y))
-    # left border
     move_to $row 0; printf "│"
     for (( x=0; x<GRID_W; x++ )); do
       col=$((1 + x*CELL_W))
@@ -205,21 +198,17 @@ draw_play() {
         printf "%s" "$EMPTY_CELL"
       fi
     done
-    # right border
     move_to $row $((1 + GRID_PIX_W)); printf "│"
   done
-
   move_to $((GRID_H+3)) 0
 }
 
 draw_step() {
   local tail=$1
   local head=$2
-  # erase tail (default cell)
   local tx=${tail%%,*}
   local ty=${tail##*,}
   move_to $((2+ty)) $((1 + tx*CELL_W)); printf "%s" "$EMPTY_CELL"
-  # draw head (snake color)
   local hx=${head%%,*}
   local hy=${head##*,}
   move_to $((2+hy)) $((1 + hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
@@ -234,6 +223,12 @@ draw_start() {
   local row=3
   move_to $row 0;   printf "%s%s%s\n" "$COLOR_TEXT" "$title" "$COLOR_RESET"
   move_to $((row+2)) 0; printf "%s%s    %s%s\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
+}
+
+draw_paused() {
+  move_to $((GRID_H/2)) $((GRID_PIX_W/2 - 3))
+  printf "%s[PAUSED]%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
 main() {
@@ -253,6 +248,9 @@ main() {
           step_snake
           draw_step "$LAST_TAIL" "$LAST_HEAD"
         fi
+        ;;
+      PAUSED)
+        draw_paused
         ;;
     esac
     msleep "$TICK_MS"
