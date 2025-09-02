@@ -12,7 +12,7 @@ CELL_W=${CELL_W:-2}
 EMPTY_CELL="$(printf "%*s" "$CELL_W" "")"
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
 GRID_PIX_W=$(( GRID_W * CELL_W ))
-TICK_MS=${SNAKE_TICK_MS:-100}
+TICK_MS=${SNAKE_TICK_MS:-70}
 
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
