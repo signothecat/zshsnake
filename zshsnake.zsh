@@ -103,8 +103,31 @@ set_want() {
 }
 
 read_input() {
-  local k rest
-  if read -k 1 -s -t 0.001 k 2>/dev/null; then
+  local k rest third
+  if read -k 1 -s -t 0.05 k 2>/dev/null; then
+    if [[ $state == PAUSED ]]; then
+      case "$k" in
+        q|Q)
+          clear_screen
+          exit 0
+          ;;
+        p|P|$' ')
+          state="PLAYING"
+          clear_paused
+          return
+          ;;
+        $'\e')  # drain ESC sequence = allow
+          # 2byte目 (maybe '[')
+          read -k 1 -s -t 0.02 rest  2>/dev/null || return
+          # 3byte目 (A/B/C/D etc.) by best-effort
+          read -k 1 -s -t 0.02 third 2>/dev/null || true
+          return
+          ;;
+        *)  # ignore other keys
+          return
+          ;;
+      esac
+    fi
     if [[ $k == $'\e' ]]; then
       if read -k 1 -s -t 0.0001 rest 2>/dev/null && [[ $rest == "[" ]]; then
         if read -k 1 -s -t 0.0001 rest 2>/dev/null; then
