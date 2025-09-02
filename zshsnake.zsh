@@ -6,12 +6,16 @@ set -o nounset
 set -o pipefail
 
 # ------------------------ Config ------------------------
-GRID_W=30
-GRID_H=15
+GRID_W=25
+GRID_H=20
 CELL_W=${CELL_W:-2}
 EMPTY_CELL="$(printf "%*s" "$CELL_W" "")"
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
 GRID_PIX_W=$(( GRID_W * CELL_W ))
+# left border width (characters). 2 => render "| " (bar + space)
+LEFT_BORDER_W=${LEFT_BORDER_W:-2}
+# right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
+RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
 TICK_MS=${SNAKE_TICK_MS:-70}
 
 if command -v tput >/dev/null 2>&1; then
@@ -213,13 +217,21 @@ draw_repeat() {
   printf "%s" "$s"
 }
 
+# helpers to render borders consistently with widths
+render_left_border() { printf "│ "; }
+render_right_border() { printf "│"; }
+
+DRAW_TOP_LEN() { echo $(( GRID_PIX_W + LEFT_BORDER_W + RIGHT_BORDER_W - 2 )); }
+
 draw_borders() {
   move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit | p/space:Pause%s" "$COLOR_TEXT" "$COLOR_RESET"
-  move_to 1 0; printf "┌"; draw_repeat "─" "$GRID_PIX_W"; printf "┐"
-  move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$GRID_PIX_W"; printf "┘"
+  # top/bottom borders: extend by LEFT_BORDER_W + RIGHT_BORDER_W - 1 to keep right edge aligned
+  local top_len=$(DRAW_TOP_LEN)
+  move_to 1 0; printf "┌"; draw_repeat "─" "$top_len"; printf "┐"
+  move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$top_len"; printf "┘"
   for (( y=0; y<GRID_H; y++ )); do
-    move_to $((2+y)) 0; printf "│"
-    move_to $((2+y)) $((1 + GRID_PIX_W)); printf "│"
+    move_to $((2+y)) 0; render_left_border           # left border with padding after bar
+    move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border  # right border with optional leading spaces
   done
   BORDERS_DRAWN=1
 }
@@ -234,7 +246,7 @@ draw_play() {
   for (( y=0; y<GRID_H; y++ )); do
     row=$((2+y))
     for (( x=0; x<GRID_W; x++ )); do
-      col=$((1 + x*CELL_W))
+      col=$((LEFT_BORDER_W + x*CELL_W))
       key=$(pos_key $x $y)
       move_to $row $col
       if [[ -n ${occ[$key]:-} ]]; then
@@ -255,10 +267,10 @@ draw_step() {
   local head=$2
   local tx=${tail%%,*}
   local ty=${tail##*,}
-  move_to $((2+ty)) $((1 + tx*CELL_W)); printf "%s" "$EMPTY_CELL"
+  move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$EMPTY_CELL"
   local hx=${head%%,*}
   local hy=${head##*,}
-  move_to $((2+hy)) $((1 + hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+  move_to $((2+hy)) $((LEFT_BORDER_W + hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
   move_to $((GRID_H+3)) 0
 }
 
@@ -273,11 +285,11 @@ draw_start() {
 }
 
 show_paused() {
-  move_to $((GRID_H/2)) $((GRID_PIX_W/2 - 3)); printf "%sPAUSED%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "%sPAUSED%s" "$COLOR_TEXT" "$COLOR_RESET"
 }
 
 clear_paused() {
-  move_to $((GRID_H/2)) $((GRID_PIX_W/2 - 3)); printf "      "
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "      "
 }
 
 main() {
