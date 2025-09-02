@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
-# zshsnake.zsh — prototype: Start screen + auto-move + direction change (no food yet)
+# Snake (Zsh) - minimal prototype: Start screen + auto-move + direction change
+# - Fixed grid 15x15
+# - Start screen: 's' to start, 'q' to quit
+# - Playing: auto forward, arrow/WASD/hjkl to turn (no reverse), 'q' quits
+# - Full redraw each frame (simple + reliable)
+# - NO food/score/collisions yet (to be added later)
 
 set -o errexit
 set -o nounset
@@ -28,32 +33,34 @@ fi
 
 # ------------------------ Terminal control ------------------------
 restore_term() {
+  # restore cursor + terminal mode
   printf "%s" "${COLOR_RESET}"
-  if command -v tput >/dev/null 2>&1; then
-    tput cnorm
-  fi
+  command -v tput >/dev/null 2>&1 && tput cnorm || true
   stty sane 2>/dev/null || true
 }
 
 setup_term() {
+  # noncanonical, no-echo, hide cursor
   stty -echo -icanon time 0 min 0 2>/dev/null || true
-  if command -v tput >/dev/null 2>&1; then
-    tput civis
-  fi
+  command -v tput >/dev/null 2>&1 && tput civis || true
 }
 
-on_exit() { restore_term; }
+on_exit() {
+  restore_term
+}
+
 trap on_exit EXIT INT TERM
 
 # ------------------------ Utility ------------------------
 msleep() {
   # sleep milliseconds (integer)
   local ms=${1:-100}
+  # use usleep if available for finer granularity
   if command -v perl >/dev/null 2>&1; then
     perl -e 'select undef, undef, undef, $ARGV[0]/1000' "$ms"
   else
-    local s
-    s=$(printf "%s" "$ms" | awk '{printf "%.3f", $1/1000}')
+    # fallback (coarse)
+    local s=$(printf "%s" "$ms" | awk '{printf "%.3f", $1/1000}')
     sleep "$s"
   fi
 }
@@ -63,18 +70,19 @@ pos_key() { printf "%d,%d" "$1" "$2"; }
 
 # ------------------------ Game state ------------------------
 state="START_MENU"  # START_MENU | PLAYING
-NEED_REDRAW=0
-typeset -g LAST_TAIL="" LAST_HEAD=""
 
-# Snake represented as array of "x,y" strings, head is the last element
+# Snake represented as array of "x,y" strings, head at index 1
 typeset -a snake
 snake=()
 
-# Direction vector (dx, dy)
-dx=1; dy=0
+# Direction vector (dx, dy): up(0,-1), down(0,1), left(-1,0), right(1,0)
+dx=1; dy=0  # will be randomized at game start
+
+# Input buffer (single latest intent)
 want_dx=1; want_dy=0
 
 rand_dir() {
+  # pick one of four directions uniformly
   local r=$((RANDOM%4))
   case $r in
     0) dx=1; dy=0;;   # right
@@ -86,27 +94,18 @@ rand_dir() {
 }
 
 init_snake() {
+  # center-start 3 segments horizontally
   local cx=$((GRID_W/2))
   local cy=$((GRID_H/2))
   snake=( $(pos_key $((cx-1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx+1)) $cy) )
   rand_dir
-  LAST_TAIL=""; LAST_HEAD=""
-  NEED_REDRAW=1
 }
 
 # ------------------------ Input handling ------------------------
-set_want() {
-  local ndx=$1 ndy=$2
-  # forbid direct reverse
-  if (( ndx == -dx && ndy == -dy )); then
-    return
-  fi
-  want_dx=$ndx; want_dy=$ndy
-}
-
-# Read any pending key(s); non-blocking.
+# Read any pending key(s); non-blocking. Sets want_dx/want_dy or handles commands
 read_input() {
   local k rest
+  # read one char non-blocking
   if read -k 1 -s -t 0.001 k 2>/dev/null; then
     # Arrow keys: ESC [ A/B/C/D
     if [[ $k == $'\e' ]]; then
@@ -128,13 +127,13 @@ read_input() {
         exit 0;;
       s|S)
         if [[ $state == START_MENU ]]; then
-          state="PLAYING"; init_snake; return
-        else
-          set_want 0 1
+          state="PLAYING"
+          init_snake
         fi
         ;;
-      # WASD (except s above handled)
+      # WASD
       w|W) set_want 0 -1;;
+      s|S) set_want 0 1;;
       a|A) set_want -1 0;;
       d|D) set_want 1 0;;
       # hjkl
@@ -146,56 +145,53 @@ read_input() {
   fi
 }
 
-apply_direction() { dx=$want_dx; dy=$want_dy; }
+# Apply desired direction if not reverse
+set_want() {
+  local ndx=$1 ndy=$2
+  # forbid direct reverse (dx,dy) -> (-dx,-dy)
+  if (( ndx == -dx && ndy == -dy )); then
+    return
+  fi
+  want_dx=$ndx; want_dy=$ndy
+}
+
+apply_direction() {
+  dx=$want_dx; dy=$want_dy
+}
 
 # ------------------------ Update & Draw ------------------------
 step_snake() {
-  local tail=${snake[1]}
+  # move head by (dx,dy); wrap around edges for prototype
   local head=${snake[-1]}
   local hx=${head%%,*}
   local hy=${head##*,}
   local nx=$(( (hx + dx + GRID_W) % GRID_W ))
   local ny=$(( (hy + dy + GRID_H) % GRID_H ))
+  # push new head
   snake+=$(pos_key $nx $ny)
+  # remove tail to keep length constant
   snake=(${snake[@]:1})
-  LAST_TAIL=$tail
-  LAST_HEAD=$(pos_key $nx $ny)
 }
 
-clear_screen() {
-  if command -v tput >/dev/null 2>&1; then
-    tput clear
-    tput cup 0 0    # be explicit about homing
-  else
-    printf "\033[2J\033[H"
-  fi
-}
-
-move_to() {
-  if command -v tput >/dev/null 2>&1; then
-    tput cup "$1" "$2"
-  else
-    printf "\033[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"
-  fi
-}
+clear_screen() { command -v tput >/dev/null 2>&1 && tput clear || printf "\033[2J\033[H"; }
+move_to() { command -v tput >/dev/null 2>&1 && tput cup "$1" "$2" || printf "\033[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"; }
 
 # draw header + grid (■ for all cells; snake colored)
 draw_play() {
   clear_screen
-  # Header (row 0) — no trailing newline (avoid scroll)
-  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+  # Header (row 0)
+  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit%s\n" "$COLOR_TEXT" "$COLOR_RESET"
 
-  # Occupancy map
+  # Precompute occupancy map for O(1) lookup
   typeset -A occ; occ=()
   local p
   for p in ${snake[@]}; do occ[$p]=1; done
 
   # Grid origin at row 1
-  local y x key row
-  for (( y=0; y<GRID_H; y++ )); do
-    row=$((1+y))
-    move_to $row 0
-    for (( x=0; x<GRID_W; x++ )); do
+  local y x key
+  for y in {0..$((GRID_H-1))}; do
+    move_to $((1+y)) 0
+    for x in {0..$((GRID_W-1))}; do
       key=$(pos_key $x $y)
       if [[ -n ${occ[$key]:-} ]]; then
         move_to $row $((x*CELL_W))
@@ -205,6 +201,7 @@ draw_play() {
         printf "%s" "$EMPTY_CELL"
       fi
     done
+    printf "\n"
   done
 
   # Park cursor outside the grid (some terminals scroll on last-column writes)
@@ -231,6 +228,7 @@ draw_start() {
   local title="Snake (Zsh)"
   local hint1="s: Start"
   local hint2="q: Quit"
+  # simple centered-ish layout
   local row=3
   move_to $row 0;   printf "%s%s%s\n" "$COLOR_TEXT" "$title" "$COLOR_RESET"
   move_to $((row+2)) 0; printf "%s%s    %s%s\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
@@ -245,16 +243,12 @@ main() {
     read_input
     case $state in
       START_MENU)
+        # idle; just poll input
         ;;
       PLAYING)
-        if (( NEED_REDRAW )); then
-          draw_play       # 最初の1回だけ全面描画
-          NEED_REDRAW=0
-        else
-          apply_direction
-          step_snake
-          draw_step "$LAST_TAIL" "$LAST_HEAD"   # 差分だけ更新
-        fi
+        apply_direction
+        step_snake
+        draw_play
         ;;
     esac
     msleep "$TICK_MS"
