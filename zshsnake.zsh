@@ -132,10 +132,10 @@ read_input() {
       if read -k 1 -s -t 0.0001 rest 2>/dev/null && [[ $rest == "[" ]]; then
         if read -k 1 -s -t 0.0001 rest 2>/dev/null; then
           case "$rest" in
-            A) [[ $state == PLAYING ]] && set_want 0 -1;;
-            B) [[ $state == PLAYING ]] && set_want 0 1;;
-            C) [[ $state == PLAYING ]] && set_want 1 0;;
-            D) [[ $state == PLAYING ]] && set_want -1 0;;
+            A) [[ $state == PLAYING ]] && set_want 0 -1;;  # UP arrow
+            B) [[ $state == PLAYING ]] && set_want 0 1;;   # DOWN arrow
+            C) [[ $state == PLAYING ]] && set_want 1 0;;   # RIGHT arrow
+            D) [[ $state == PLAYING ]] && set_want -1 0;;  # LEFT arrow
           esac
         fi
       fi
