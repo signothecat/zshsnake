@@ -8,6 +8,11 @@ set -o pipefail
 # ------------------------ Config ------------------------
 GRID_W=15
 GRID_H=15
+# horizontal cell width (characters). Increase to compensate tall line height
+CELL_W=${CELL_W:-2}
+# cell strings (empty and snake). SNAKE_CELL is a full cell with padding to CELL_W
+EMPTY_CELL="$(printf "%*s" "$CELL_W" "")"
+SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
 TICK_MS=${SNAKE_TICK_MS:-100}   # frame time in ms
 
 # Colors via tput (fallback to no color)
@@ -193,9 +198,11 @@ draw_play() {
     for (( x=0; x<GRID_W; x++ )); do
       key=$(pos_key $x $y)
       if [[ -n ${occ[$key]:-} ]]; then
-        printf "%s■%s" "$COLOR_SNAKE" "$COLOR_RESET"
+        move_to $row $((x*CELL_W))
+        printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
       else
-        printf "■"
+        move_to $row $((x*CELL_W))
+        printf "%s" "$EMPTY_CELL"
       fi
     done
   done
@@ -211,11 +218,11 @@ draw_step() {
   # erase tail (default cell)
   local tx=${tail%%,*}
   local ty=${tail##*,}
-  move_to $((ty+1)) $tx; printf "■"
+  move_to $((ty+1)) $((tx*CELL_W)); printf "%s" "$EMPTY_CELL"
   # draw head (snake color)
   local hx=${head%%,*}
   local hy=${head##*,}
-  move_to $((hy+1)) $hx; printf "%s■%s" "$COLOR_SNAKE" "$COLOR_RESET"
+  move_to $((hy+1)) $((hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
   move_to $((GRID_H+1)) 0
 }
 
