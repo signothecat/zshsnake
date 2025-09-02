@@ -17,6 +17,7 @@ LEFT_BORDER_W=${LEFT_BORDER_W:-2}
 # right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
 RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
 TICK_MS=${SNAKE_TICK_MS:-70}
+SCORE=${SCORE:-0}
 
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
@@ -226,15 +227,21 @@ render_right_border() { printf "│"; }
 DRAW_TOP_LEN() { echo $(( GRID_PIX_W + LEFT_BORDER_W + RIGHT_BORDER_W - 2 )); }
 
 draw_borders() {
-  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit | p/space:Pause%s" "$COLOR_TEXT" "$COLOR_RESET"
+  local title="Zsh Snake"
+  # top line: score placeholder
+  move_to 0 0; printf "%s%s%s %s| Score: %d%s" \
+    "$COLOR_TEXT" "$title" "$COLOR_RESET" \
+    "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
   # top/bottom borders: extend by LEFT_BORDER_W + RIGHT_BORDER_W - 1 to keep right edge aligned
   local top_len=$(DRAW_TOP_LEN)
   move_to 1 0; printf "┌"; draw_repeat "─" "$top_len"; printf "┐"
   move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$top_len"; printf "┘"
   for (( y=0; y<GRID_H; y++ )); do
-    move_to $((2+y)) 0; render_left_border           # left border with padding after bar
-    move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border  # right border with optional leading spaces
+  move_to $((2+y)) 0; render_left_border # left border with padding after bar
+  move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border # right border with optional leading spaces
   done
+  # bottom line: keybinding help moved here
+  move_to $((GRID_H+3)) 0; printf "%sKey: [p/space]Pause, [q]Quit %s" "$COLOR_TEXT" "$COLOR_RESET"
   BORDERS_DRAWN=1
 }
 
@@ -278,7 +285,7 @@ draw_step() {
 
 draw_start() {
   clear_screen
-  local title="Snake (Zsh)"
+  local title="Zsh Snake"
   local hint1="s: Start"
   local hint2="q: Quit"
   local row=3
