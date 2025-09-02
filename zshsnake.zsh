@@ -6,10 +6,10 @@ set -o nounset
 set -o pipefail
 
 # ------------------------ Config ------------------------
-GRID_W=25
+GRID_W=26
 GRID_H=20
 CELL_W=${CELL_W:-2}
-EMPTY_CELL="$(printf "%*s" "$CELL_W" "")"
+FIELD_CH=${FIELD_CH:-$'░'}
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
 GRID_PIX_W=$(( GRID_W * CELL_W ))
 # left border width (characters). 2 => render "| " (bar + space)
@@ -23,11 +23,13 @@ if command -v tput >/dev/null 2>&1; then
   COLOR_SNAKE=$(tput setaf 2)
   COLOR_TEXT=$(tput setaf 7)
   COLOR_BORDER=$(tput setaf 4)
+  COLOR_FIELD=$(tput setaf 7)
 else
   COLOR_RESET=""
   COLOR_SNAKE=""
   COLOR_TEXT=""
   COLOR_BORDER=""
+  COLOR_FIELD=""
 fi
 
 restore_term() {
@@ -252,7 +254,7 @@ draw_play() {
       if [[ -n ${occ[$key]:-} ]]; then
         printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
       else
-        printf "%s" "$EMPTY_CELL"
+        printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
       fi
     done
   done
@@ -267,7 +269,7 @@ draw_step() {
   local head=$2
   local tx=${tail%%,*}
   local ty=${tail##*,}
-  move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$EMPTY_CELL"
+  move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
   local hx=${head%%,*}
   local hy=${head##*,}
   move_to $((2+hy)) $((LEFT_BORDER_W + hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
@@ -289,7 +291,7 @@ show_paused() {
 }
 
 clear_paused() {
-  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "      "
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "░░░░░░"
 }
 
 main() {
