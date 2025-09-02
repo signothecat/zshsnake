@@ -6,7 +6,7 @@ set -o nounset
 set -o pipefail
 
 # ------------------------ Config ------------------------
-GRID_W=15
+GRID_W=30
 GRID_H=15
 # horizontal cell width (characters). Increase to compensate tall line height
 CELL_W=${CELL_W:-2}
