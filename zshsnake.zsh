@@ -12,7 +12,7 @@ set -o pipefail  # Fail if any command in a pipeline fails
 ########################################
 
 GRID_W=24
-GRID_H=18
+GRID_H=20
 CELL_W=${CELL_W:-2}
 FIELD_CH=${FIELD_CH:-$'░'}
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
@@ -21,7 +21,7 @@ GRID_PIX_W=$(( GRID_W * CELL_W ))
 LEFT_BORDER_W=${LEFT_BORDER_W:-2}
 # right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
 RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
-TICK_MS=${SNAKE_TICK_MS:-100}
+TICK_MS=${SNAKE_TICK_MS:-110}
 SCORE=${SCORE:-0}
 
 if command -v tput >/dev/null 2>&1; then
