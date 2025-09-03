@@ -11,8 +11,8 @@ set -o pipefail  # Fail if any command in a pipeline fails
 
 ########################################
 
-GRID_W=26
-GRID_H=20
+GRID_W=24
+GRID_H=18
 CELL_W=${CELL_W:-2}
 FIELD_CH=${FIELD_CH:-$'░'}
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
@@ -21,7 +21,7 @@ GRID_PIX_W=$(( GRID_W * CELL_W ))
 LEFT_BORDER_W=${LEFT_BORDER_W:-2}
 # right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
 RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
-TICK_MS=${SNAKE_TICK_MS:-50}
+TICK_MS=${SNAKE_TICK_MS:-100}
 SCORE=${SCORE:-0}
 
 if command -v tput >/dev/null 2>&1; then
@@ -148,7 +148,7 @@ clear_eol() {
 # ------------------- Menu Screen ----------------------
 
 # Draw start menu screen (title and available key hints)
-draw_menu() {
+draw_start() {
   local title="Zsh Snake"
   local hint1="[s] Start"
   local hint2="[q] Quit"
@@ -358,6 +358,27 @@ apply_direction() { dx=$want_dx; dy=$want_dy; }
 
 # Helper functions for positions, movement, and timing
 
+# Current time in milliseconds (robust across environments)
+now_ms() {
+  # Prefer zsh/datetime's EPOCHREALTIME if available
+  if zmodload -e zsh/datetime 2>/dev/null || zmodload zsh/datetime 2>/dev/null; then
+    printf '%.0f' "$(( EPOCHREALTIME * 1000 ))"
+    return
+  fi
+  # Fallback: Perl High-Resolution timer
+  if command -v perl >/dev/null 2>&1; then
+    perl -MTime::HiRes -e 'printf("%d", int(Time::HiRes::time()*1000))'
+    return
+  fi
+  # Fallback: zsh printf epoch seconds (no ms precision)
+  if printf '%(%s)T' -1 >/dev/null 2>&1; then
+    printf '%s000' "$(printf '%(%s)T' -1)"
+    return
+  fi
+  # Last resort
+  date +%s 2>/dev/null | awk '{printf "%s000", $1}'
+}
+
 draw_repeat() {
   local ch="$1" n=$2
   local s
@@ -398,7 +419,7 @@ msleep() {
 
 read_input() {
   local k rest third
-  if read -k 1 -s -t 0.05 k 2>/dev/null; then
+  if read -k 1 -s -t 0 k 2>/dev/null; then
         if [[ $state == START_MENU ]]; then
       case "$k" in
         s|S)
@@ -429,7 +450,7 @@ read_input() {
         b|B)
           state="START_MENU"
           clear_screen
-          draw_menu
+          draw_start
           NEED_REDRAW=0
           BORDERS_DRAWN=0
           FIRST_STEP_DONE=0
@@ -462,7 +483,7 @@ read_input() {
         b|B)
           state="START_MENU"
           clear_screen
-          draw_menu
+          draw_start
           NEED_REDRAW=0
           BORDERS_DRAWN=0
           FIRST_STEP_DONE=0
@@ -532,7 +553,7 @@ read_input() {
         if [[ $state == "PLAYING" || $state == "PAUSED" ]]; then
           state="START_MENU"
           clear_screen
-          draw_menu
+          draw_start
           NEED_REDRAW=0
           BORDERS_DRAWN=0
           FIRST_STEP_DONE=0
@@ -594,8 +615,9 @@ show_gameover() {
 main() {
   setup_term
   clear_screen
-  draw_menu
+  draw_start
   while true; do
+    local frame_start_ms=$(now_ms)
     read_input
     case $state in
       START_MENU)
@@ -620,8 +642,13 @@ main() {
         ;;
       GAMEOVER)
         ;;
-    esac
-    msleep "$TICK_MS"
+    esac    # frame pacing: sleep only the remaining time of TICK_MS after work this tick
+    {
+      local frame_end_ms=$(now_ms)
+      local elapsed=$(( frame_end_ms - frame_start_ms ))
+      local remain=$(( TICK_MS - elapsed ))
+      (( remain > 0 )) && msleep "$remain"
+    }
   done
 }
 
