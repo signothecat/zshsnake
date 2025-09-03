@@ -44,16 +44,17 @@ zshsnake
 - **s**: Start game (on start screen)  
 - **q**: Quit  
 - **↑ ↓ ← → / WASD / hjkl**: Move the snake  
-- Snake moves automatically — you just steer it!  
+- Snake moves automatically — you just steer it!
 
-> *Note*: At this stage, the game is still a prototype (no food, no score, no game over yet).  
+## FAQ
 
-## Roadmap
-- [ ] Add food and score counter  
-- [ ] Implement self-collision detection  
-- [ ] Game over screen with restart option  
-- [ ] Random wall-turning behavior  
-- [ ] Pause and restart keys (`p`, `r`)  
+### How can I uninstall zshsnake?
+
+If you cloned the repository locally, simply delete the `zshsnake` folder:
+
+```bash
+rm -rf zshsnake
+```
 
 ## License
 MIT License © 2025 signothecat
