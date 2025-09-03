@@ -57,6 +57,29 @@ fi
 
 ########################################
 
+# Runtime State (mutable globals)
+# - Current game mode and per-frame flags
+# - Snake body and movement vectors
+# - Logic -> Render handoff flags
+
+########################################
+
+state="START_MENU"        # current game state
+NEED_REDRAW=0             # request full redraw
+BORDERS_DRAWN=0           # borders drawn (lazy init)
+FIRST_STEP_DONE=0         # first movement completed
+
+typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""  # incremental draw keys
+typeset -g FOOD=""                                      # "x,y" or empty
+typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0               # logic→render flags
+
+typeset -a snake
+snake=()                    # body as ["x,y", ...]
+dx=1; dy=0                  # current direction
+want_dx=1; want_dy=0        # desired direction (from input)
+
+########################################
+
 # Terminal Controls
 
 ########################################
@@ -251,6 +274,8 @@ init_snake() {
   NEED_REDRAW=1
   BORDERS_DRAWN=0
   FIRST_STEP_DONE=0
+  # reset logic→render flags
+  ATE=0; COLLIDED=0; SCORE_DIRTY=0
   # (re)spawn food after snake is placed so it never overlaps
   FOOD=""
   spawn_food
@@ -278,6 +303,8 @@ spawn_food() {
 }
 
 update_snake() {
+  # reset per-tick flags
+  ATE=0; COLLIDED=0
   local tail=${snake[1]}
   local head=${snake[-1]}
   local hx=${head%%,*}
@@ -285,20 +312,18 @@ update_snake() {
   local nx=$((hx + dx))
   local ny=$((hy + dy))
   if (( nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H )); then
-    state="GAMEOVER"
-    show_gameover
+    COLLIDED=1
     return
   fi
   local new=$(pos_key $nx $ny)
-  local ate=0
   if [[ -n $FOOD && $new == $FOOD ]]; then
-    ate=1
+    ATE=1
   fi
   snake+=$new
-  if (( ate )); then
+  if (( ATE )); then
     LAST_TAIL=""
     SCORE=$((SCORE+1))
-    draw_header
+    SCORE_DIRTY=1
   else
     snake=(${snake[@]:1})
     LAST_TAIL=$tail
@@ -306,40 +331,21 @@ update_snake() {
   LAST_PREV_HEAD=$head
   LAST_HEAD=$new
   FIRST_STEP_DONE=1
-  if (( ate )); then
+  if (( ATE )); then
     spawn_food
-  fi
-}
-
-set_want() {
-  local ndx=$1 ndy=$2
-  if (( ndx == -dx && ndy == -dy )); then
-    return
-  fi
-  if (( FIRST_STEP_DONE == 1 )); then
-    want_dx=$ndx; want_dy=$ndy
   fi
 }
 
 # Apply the desired direction (want_dx, want_dy) to the current movement (dx, dy)
 apply_direction() { dx=$want_dx; dy=$want_dy; }
 
-rand_dir() {
-  local r=$((RANDOM%4))
-  case $r in
-    0) dx=1; dy=0;;
-    1) dx=-1; dy=0;;
-    2) dx=0; dy=1;;
-    3) dx=0; dy=-1;;
-  esac
-  want_dx=$dx; want_dy=$dy
-}
-
 ########################################
 
 # Utility Helpers
 
 ########################################
+
+# Helper functions for positions, movement, and timing
 
 draw_repeat() {
   local ch="$1" n=$2
@@ -525,16 +531,26 @@ read_input() {
   fi
 }
 
-state="START_MENU"
-NEED_REDRAW=0
-BORDERS_DRAWN=0
-FIRST_STEP_DONE=0
-typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""
-typeset -g FOOD=""
-typeset -a snake
-snake=()
-dx=1; dy=0
-want_dx=1; want_dy=0
+rand_dir() {
+  local r=$((RANDOM%4))
+  case $r in
+    0) dx=1; dy=0;;
+    1) dx=-1; dy=0;;
+    2) dx=0; dy=1;;
+    3) dx=0; dy=-1;;
+  esac
+  want_dx=$dx; want_dy=$dy
+}
+
+set_want() {
+  local ndx=$1 ndy=$2
+  if (( ndx == -dx && ndy == -dy )); then
+    return
+  fi
+  if (( FIRST_STEP_DONE == 1 )); then
+    want_dx=$ndx; want_dy=$ndy
+  fi
+}
 
 ########################################
 
@@ -577,7 +593,13 @@ main() {
         else
           apply_direction
           update_snake
-          [[ $state == PLAYING ]] && draw_step "$LAST_TAIL" "$LAST_HEAD"
+          if (( COLLIDED )); then
+            state="GAMEOVER"
+            show_gameover
+          else
+            draw_step "$LAST_TAIL" "$LAST_HEAD"
+            (( SCORE_DIRTY )) && { draw_header; SCORE_DIRTY=0; }
+          fi
         fi
         ;;
       PAUSED)
