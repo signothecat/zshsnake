@@ -2,6 +2,8 @@
 
 A retro snake game for your terminal, written in pure Zsh with no external dependencies.
 
+[![asciicast](https://asciinema.org/a/CTKQCBNLEw2L5ggwheVPwv4pZ.svg)](https://asciinema.org/a/CTKQCBNLEw2L5ggwheVPwv4pZ)
+
 ## Requirements
 - Zsh 5.8+
 - `stty` and `tput` (ncurses)  
