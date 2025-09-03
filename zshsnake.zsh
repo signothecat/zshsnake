@@ -11,18 +11,47 @@ set -o pipefail  # Fail if any command in a pipeline fails
 
 ########################################
 
+# ---------- Play Area Width and Height ------------
+
 GRID_W=24
 GRID_H=20
-CELL_W=${CELL_W:-2}
+
+# ----------------- Characters ---------------------
+
 FIELD_CH=${FIELD_CH:-$'░'}
 SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
+
+# -------------- Constants / Variables-----------------
+
+# Width of a single grid cell in terminal characters (default: 2)
+CELL_W=${CELL_W:-2}
+
+# Total grid width in terminal characters (GRID_W cells * CELL_W characters per cell)
 GRID_PIX_W=$(( GRID_W * CELL_W ))
+
 # left border width (characters). 2 => render "| " (bar + space)
 LEFT_BORDER_W=${LEFT_BORDER_W:-2}
+
 # right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
 RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
+
+# Play Speed
 TICK_MS=${SNAKE_TICK_MS:-110}
+
+# Score variable
 SCORE=${SCORE:-0}
+
+# ------------------- Colors ----------------------
+
+# ANSI Color Codes (for reference)
+# 0 = Black
+# 1 = Red
+# 2 = Green
+# 3 = Yellow
+# 4 = Blue
+# 5 = Magenta
+# 6 = Cyan
+# 7 = White
 
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
@@ -39,16 +68,6 @@ else
   COLOR_FIELD=""
   COLOR_FOOD=""
 fi
-
-# ANSI Color Codes (for reference)
-# 0 = Black
-# 1 = Red
-# 2 = Green
-# 3 = Yellow
-# 4 = Blue
-# 5 = Magenta
-# 6 = Cyan
-# 7 = White
 
 ########################################
 
