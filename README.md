@@ -21,28 +21,29 @@ This limitation is currently WIP.
 
 ## Installation
 
-Clone this repository and make the script executable:
-
+### 1. Clone the repository
 ```zsh
 git clone https://github.com/signothecat/zshsnake.git
 cd zshsnake
+```
+
+### 2. Make the script executable
+```zsh
 chmod +x zshsnake.zsh
 ```
 
-Run directly:
-
+### 3. Run the game
 ```zsh
 ./zshsnake.zsh
 ```
 
-Optionally install globally:
+## (Optional) Global Installation
 
 ```zsh
-cp zshsnake.zsh /usr/local/bin/zshsnake
+sudo cp zshsnake.zsh /usr/local/bin/zshsnake
 ```
 
-Now you can just run:
-
+Now you can start the game simply by:
 ```zsh
 zshsnake
 ```
