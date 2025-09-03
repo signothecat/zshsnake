@@ -112,7 +112,31 @@ set_want() {
 read_input() {
   local k rest third
   if read -k 1 -s -t 0.05 k 2>/dev/null; then
-    if [[ $state == PAUSED ]]; then
+    if [[ $state == GAMEOVER ]]; then
+      case "$k" in
+        r|R)
+          state="PLAYING"
+          init_snake
+          return
+          ;;
+        b|B)
+          state="START_MENU"
+          clear_screen
+          draw_start
+          NEED_REDRAW=0
+          BORDERS_DRAWN=0
+          FIRST_STEP_DONE=0
+          return
+          ;;
+        q|Q)
+          clear_screen
+          exit 0
+          ;;
+        *)
+          return
+          ;;
+      esac
+    elif [[ $state == PAUSED ]]; then
       case "$k" in
         q|Q)
           clear_screen
@@ -213,8 +237,13 @@ step_snake() {
   local head=${snake[-1]}
   local hx=${head%%,*}
   local hy=${head##*,}
-  local nx=$(((hx + dx + GRID_W) % GRID_W))
-  local ny=$(((hy + dy + GRID_H) % GRID_H))
+  local nx=$((hx + dx))
+  local ny=$((hy + dy))
+  if (( nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H )); then
+    state="GAMEOVER"
+    show_gameover
+    return
+  fi
   snake+=$(pos_key $nx $ny)
   snake=(${snake[@]:1})
   LAST_TAIL=$tail
@@ -238,6 +267,15 @@ move_to() {
     printf "[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"
   fi
 }
+
+clear_eol() {
+  if command -v tput >/dev/null 2>&1; then
+    tput el
+  else
+    printf "[K"
+  fi
+}
+
 
 draw_repeat() {
   local ch="$1" n=$2
@@ -328,6 +366,11 @@ clear_paused() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "░░░░░░"
 }
 
+show_gameover() {
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 5)); printf "%sGAME OVER%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0; clear_eol; printf "%s[r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+}
+
 main() {
   setup_term
   draw_start
@@ -343,10 +386,12 @@ main() {
         else
           apply_direction
           step_snake
-          draw_step "$LAST_TAIL" "$LAST_HEAD"
+          [[ $state == PLAYING ]] && draw_step "$LAST_TAIL" "$LAST_HEAD"
         fi
         ;;
       PAUSED)
+        ;;
+      GAMEOVER)
         ;;
     esac
     msleep "$TICK_MS"
