@@ -24,10 +24,10 @@ CELL_W=${CELL_W:-2}
 # Total grid width in terminal characters (GRID_W cells * CELL_W characters per cell)
 GRID_PIX_W=$(( GRID_W * CELL_W ))
 
-# left border width (characters). 2 => render "| " (bar + space)
+# left border padding (spaces AFTER the bar). 2 => render "| "
 LEFT_BORDER_W=${LEFT_BORDER_W:-2}
 
-# right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
+# right border padding (spaces BEFORE the bar). 1 => render "|", 2 => render " |"
 RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
 
 # Play Speed
@@ -98,9 +98,9 @@ NEED_REDRAW=0             # request full redraw
 BORDERS_DRAWN=0           # borders drawn (lazy init)
 FIRST_STEP_DONE=0         # first movement completed
 
-typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""  # incremental draw keys
-typeset -g FOOD=""                                      # "x,y" or empty
-typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0               # logic→render flags
+typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""    # incremental draw keys
+typeset -g FOOD=""                                        # "x,y" or empty
+typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0 DEATH_CAUSE=""  # logic→render flags + cause of death
 
 typeset -a snake
 snake=()                    # body as ["x,y", ...]
@@ -304,9 +304,9 @@ init_snake() {
   NEED_REDRAW=1
   BORDERS_DRAWN=0
   FIRST_STEP_DONE=0
-  # reset logic→render flags
-  ATE=0; COLLIDED=0; SCORE_DIRTY=0
-  # (re)spawn food after snake is placed so it never overlaps
+  # reset logic to render flags
+  ATE=0; COLLIDED=0; SCORE_DIRTY=0; DEATH_CAUSE=""
+  # (re)spawn food ...
   FOOD=""
   spawn_food
 }
@@ -341,9 +341,10 @@ spawn_food() {
 }
 
 # Update snake position and state for one tick
+# Update snake position and state for one tick
 update_snake() {
-  # reset per-tick flags
-  ATE=0; COLLIDED=0
+  # Reset per-tick flags (COLLIDED kept for backward compatibility)
+  ATE=0; DEATH_CAUSE=""; COLLIDED=0
 
   # Get current tail and head positions
   local tail=${snake[1]}
@@ -355,23 +356,33 @@ update_snake() {
   local nx=$((hx + dx))
   local ny=$((hy + dy))
 
-  # Check for wall collision
+  # --- Wall collision ---
   if (( nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H )); then
-    COLLIDED=1
+    DEATH_CAUSE="WALL"; COLLIDED=1
     return
   fi
 
   # Convert new position to key
   local new=$(pos_key $nx $ny)
 
-  # Check if food is eaten
+  # --- Food check ---
   if [[ -n $FOOD && $new == $FOOD ]]; then
     ATE=1
   fi
 
-  # Add new head to the snake
-  snake+=$new
+  # --- Self-collision ---
+  # Build occupancy map (allow stepping into the current tail if not eating)
+  typeset -A occ; occ=()
+  local s
+  for s in ${snake[@]}; do occ[$s]=1; done
+  if (( ! ATE )); then unset 'occ[$tail]'; fi
+  if [[ -n ${occ[$new]:-} ]]; then
+    DEATH_CAUSE="SELF"; COLLIDED=1
+    return
+  fi
 
+  # --- Normal update flow ---
+  snake+=$new
   if (( ATE )); then
     # Snake grows: tail remains
     LAST_TAIL=""
@@ -386,12 +397,14 @@ update_snake() {
   # Update head tracking
   LAST_PREV_HEAD=$head
   LAST_HEAD=$new
+  FIRST_STEP_DONE=1
 
   # Spawn new food if eaten
   if (( ATE )); then
     spawn_food
   fi
 }
+
 
 # Apply the desired direction (want_dx, want_dy) to the current movement (dx, dy)
 apply_direction() { dx=$want_dx; dy=$want_dy; }
@@ -669,7 +682,7 @@ main() {
         else
           apply_direction
           update_snake
-          if (( COLLIDED )); then
+          if [[ -n $DEATH_CAUSE ]]; then
             state="GAMEOVER"
             show_gameover
           else
