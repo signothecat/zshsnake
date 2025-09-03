@@ -33,6 +33,15 @@ else
   COLOR_FIELD=""
 fi
 
+# ensure head color (magenta)
+if [[ -z "${COLOR_HEAD:-}" ]]; then
+  if command -v tput >/dev/null 2>&1; then
+    COLOR_HEAD=$(tput setaf 5)
+  else
+    COLOR_HEAD=""
+  fi
+fi
+
 restore_term() {
   printf "%s" "${COLOR_RESET}"
   if command -v tput >/dev/null 2>&1; then
@@ -71,7 +80,7 @@ state="START_MENU"
 NEED_REDRAW=0
 BORDERS_DRAWN=0
 FIRST_STEP_DONE=0
-typeset -g LAST_TAIL="" LAST_HEAD=""
+typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""
 typeset -a snake
 snake=()
 dx=1; dy=0
@@ -247,6 +256,7 @@ step_snake() {
   snake+=$(pos_key $nx $ny)
   snake=(${snake[@]:1})
   LAST_TAIL=$tail
+  LAST_PREV_HEAD=$head
   LAST_HEAD=$(pos_key $nx $ny)
   FIRST_STEP_DONE=1
 }
@@ -316,6 +326,7 @@ draw_play() {
   typeset -A occ; occ=()
   local p
   for p in ${snake[@]}; do occ[$p]=1; done
+  local headk=${snake[-1]}
   local y x key row col
   for (( y=0; y<GRID_H; y++ )); do
     row=$((2+y))
@@ -324,7 +335,11 @@ draw_play() {
       key=$(pos_key $x $y)
       move_to $row $col
       if [[ -n ${occ[$key]:-} ]]; then
-        printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+        if [[ $key == $headk ]]; then
+          printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
+        else
+          printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+        fi
       else
         printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
       fi
@@ -342,9 +357,15 @@ draw_step() {
   local tx=${tail%%,*}
   local ty=${tail##*,}
   move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+  # recolor previous head (now body) if it's still on the snake
+  if [[ -n ${LAST_PREV_HEAD} && ${LAST_PREV_HEAD} != ${tail} ]]; then
+    local px=${LAST_PREV_HEAD%%,*}
+    local py=${LAST_PREV_HEAD##*,}
+    move_to $((2+py)) $((LEFT_BORDER_W + px*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+  fi
   local hx=${head%%,*}
   local hy=${head##*,}
-  move_to $((2+hy)) $((LEFT_BORDER_W + hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+  move_to $((2+hy)) $((LEFT_BORDER_W + hx*CELL_W)); printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
   move_to $((GRID_H+3)) 0
 }
 
