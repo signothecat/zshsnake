@@ -36,6 +36,10 @@ TICK_MS=${SNAKE_TICK_MS:-110}
 # Score variable
 SCORE=${SCORE:-0}
 
+# Text attributes (bold on/off). Use \e[1m for bold and \e[22m to turn bold off
+BOLD_ON=$'\e[1m'
+BOLD_OFF=$'\e[22m'
+
 # ----------------- Characters ---------------------
 
 FIELD_CH=${FIELD_CH:-$'░'}
@@ -172,7 +176,7 @@ draw_start() {
   local hint1="[s] Start"
   local hint2="[q] Quit"
   local row=3
-  move_to $row 0;   printf "%s%s%s\n" "$COLOR_TEXT" "$title" "$COLOR_RESET"
+  move_to $row 0; printf "%s%s%s%s\n" "$COLOR_TEXT" "$BOLD_ON" "$title" "$BOLD_OFF"
   move_to $((row+2)) 0; printf "|  %s%s  |  %s%s  |\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
   move_to $((GRID_H+3)) 0
 }
@@ -187,8 +191,8 @@ DRAW_TOP_LEN() { echo $(( GRID_PIX_W + LEFT_BORDER_W + RIGHT_BORDER_W - 2 )); }
 # game screen's header: title + score
 draw_header() {
   local title="Zsh Snake"
-  move_to 0 0; clear_eol; printf "%s%s%s %s| Score: %d%s" \
-    "$COLOR_TEXT" "$title" "$COLOR_RESET" \
+  move_to 0 0; clear_eol; printf "%s%s%s%s %s| Score: %d%s" \
+    "$COLOR_TEXT" "$BOLD_ON" "$title" "$BOLD_OFF" \
     "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
   move_to $((GRID_H+3)) 0
 }
