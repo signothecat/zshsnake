@@ -25,12 +25,14 @@ if command -v tput >/dev/null 2>&1; then
   COLOR_TEXT=$(tput setaf 7)
   COLOR_BORDER=$(tput setaf 4)
   COLOR_FIELD=$(tput setaf 7)
+  COLOR_FOOD=$(tput setaf 3)
 else
   COLOR_RESET=""
   COLOR_SNAKE=""
   COLOR_TEXT=""
   COLOR_BORDER=""
   COLOR_FIELD=""
+  COLOR_FOOD=""
 fi
 
 # ensure head color (magenta)
@@ -81,6 +83,7 @@ NEED_REDRAW=0
 BORDERS_DRAWN=0
 FIRST_STEP_DONE=0
 typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""
+typeset -g FOOD=""
 typeset -a snake
 snake=()
 dx=1; dy=0
@@ -102,10 +105,13 @@ init_snake() {
   local cy=$((GRID_H/2))
   snake=( $(pos_key $((cx-1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx+1)) $cy) )
   dx=1; dy=0; want_dx=$dx; want_dy=$dy
-  LAST_TAIL=""; LAST_HEAD=""
+  LAST_TAIL=""; LAST_HEAD=""; SCORE=0
   NEED_REDRAW=1
   BORDERS_DRAWN=0
   FIRST_STEP_DONE=0
+  # (re)spawn food after snake is placed so it never overlaps
+  FOOD=""
+  spawn_food
 }
 
 set_want() {
@@ -278,12 +284,26 @@ step_snake() {
     show_gameover
     return
   fi
-  snake+=$(pos_key $nx $ny)
-  snake=(${snake[@]:1})
-  LAST_TAIL=$tail
+  local new=$(pos_key $nx $ny)
+  local ate=0
+  if [[ -n $FOOD && $new == $FOOD ]]; then
+    ate=1
+  fi
+  snake+=$new
+  if (( ate )); then
+    LAST_TAIL=""
+    SCORE=$((SCORE+1))
+    draw_header
+  else
+    snake=(${snake[@]:1})
+    LAST_TAIL=$tail
+  fi
   LAST_PREV_HEAD=$head
-  LAST_HEAD=$(pos_key $nx $ny)
+  LAST_HEAD=$new
   FIRST_STEP_DONE=1
+  if (( ate )); then
+    spawn_food
+  fi
 }
 
 clear_screen() {
@@ -320,18 +340,53 @@ draw_repeat() {
   printf "%s" "$s"
 }
 
+spawn_food() {
+  typeset -A occ; occ=()
+  local s
+  for s in ${snake[@]}; do occ[$s]=1; done
+  local free=$(( GRID_W*GRID_H - ${#snake[@]} ))
+  if (( free <= 0 )); then
+    FOOD=""
+    return
+  fi
+  local x y k
+  while true; do
+    x=$((RANDOM % GRID_W))
+    y=$((RANDOM % GRID_H))
+    k=$(pos_key $x $y)
+    if [[ -z ${occ[$k]:-} ]]; then
+      FOOD=$k
+      break
+    fi
+  done
+}
+
+draw_food() {
+  [[ -z ${FOOD} ]] && return
+  local fx=${FOOD%%,*}
+  local fy=${FOOD##*,}
+  move_to $((2+fy)) $((LEFT_BORDER_W + fx*CELL_W)); printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
+}
+
 # helpers to render borders consistently with widths
 render_left_border() { printf "│ "; }
 render_right_border() { printf "│"; }
 
 DRAW_TOP_LEN() { echo $(( GRID_PIX_W + LEFT_BORDER_W + RIGHT_BORDER_W - 2 )); }
 
+# header: title + score
+ draw_header() {
+  local title="Zsh Snake"
+  move_to 0 0; clear_eol; printf "%s%s%s %s| Score: %d%s" \
+    "$COLOR_TEXT" "$title" "$COLOR_RESET" \
+    "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
+}
+
+
 draw_borders() {
   local title="Zsh Snake"
   # top line: score placeholder
-  move_to 0 0; printf "%s%s%s %s| Score: %d%s" \
-    "$COLOR_TEXT" "$title" "$COLOR_RESET" \
-    "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
+  draw_header
   # top/bottom borders: extend by LEFT_BORDER_W + RIGHT_BORDER_W - 1 to keep right edge aligned
   local top_len=$(DRAW_TOP_LEN)
   move_to 1 0; printf "┌"; draw_repeat "─" "$top_len"; printf "┐"
@@ -341,6 +396,7 @@ draw_borders() {
   move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border # right border with optional leading spaces
   done
   # bottom line: keybinding help moved here
+  draw_food
   move_to $((GRID_H+3)) 0; printf "%s[p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
   BORDERS_DRAWN=1
 }
@@ -365,6 +421,8 @@ draw_play() {
         else
           printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
         fi
+      elif [[ $key == $FOOD ]]; then
+        printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
       else
         printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
       fi
@@ -379,9 +437,11 @@ draw_step() {
   fi
   local tail=$1
   local head=$2
-  local tx=${tail%%,*}
-  local ty=${tail##*,}
-  move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+  if [[ -n $tail ]]; then
+    local tx=${tail%%,*}
+    local ty=${tail##*,}
+    move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+  fi
   # recolor previous head (now body) if it's still on the snake
   if [[ -n ${LAST_PREV_HEAD} && ${LAST_PREV_HEAD} != ${tail} ]]; then
     local px=${LAST_PREV_HEAD%%,*}
@@ -391,6 +451,8 @@ draw_step() {
   local hx=${head%%,*}
   local hy=${head##*,}
   move_to $((2+hy)) $((LEFT_BORDER_W + hx*CELL_W)); printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
+  # ensure new food (if spawned this tick) is drawn immediately
+  draw_food
   move_to $((GRID_H+3)) 0
 }
 
