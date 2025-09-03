@@ -24,19 +24,9 @@ RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
 TICK_MS=${SNAKE_TICK_MS:-50}
 SCORE=${SCORE:-0}
 
-# ANSI Color Codes (for reference)
-# 0 = Black
-# 1 = Red
-# 2 = Green
-# 3 = Yellow
-# 4 = Blue
-# 5 = Magenta
-# 6 = Cyan
-# 7 = White
-
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
-  COLOR_SNAKE=$(tput setaf 6)
+  COLOR_SNAKE=$(tput setaf 4)
   COLOR_TEXT=$(tput setaf 7)
   COLOR_BORDER=$(tput setaf 4)
   COLOR_FIELD=$(tput setaf 7)
@@ -50,16 +40,26 @@ else
   COLOR_FOOD=""
 fi
 
+# ANSI Color Codes (for reference)
+# 0 = Black
+# 1 = Red
+# 2 = Green
+# 3 = Yellow
+# 4 = Blue
+# 5 = Magenta
+# 6 = Cyan
+# 7 = White
+
 ########################################
 
 #  Snake Head Color Initialization
 
 ########################################
 
-# head color (magenta)
+# head color
 if [[ -z "${COLOR_HEAD:-}" ]]; then
   if command -v tput >/dev/null 2>&1; then
-    COLOR_HEAD=$(tput setaf 4)
+    COLOR_HEAD=$(tput setaf 2)
   else
     COLOR_HEAD=""
   fi
@@ -141,7 +141,7 @@ clear_eol() {
   if command -v tput >/dev/null 2>&1; then
     tput el
   else
-    printf "[K"
+    printf "\033[K"
   fi
 }
 
@@ -191,7 +191,6 @@ draw_borders() {
   draw_food
   move_to $((GRID_H+3)) 0; printf "%s[p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
   BORDERS_DRAWN=1
-  move_to $((GRID_H+3)) 0
 }
 
 # play screen
@@ -222,7 +221,6 @@ draw_play() {
       fi
     done
   done
-  move_to $((GRID_H+3)) 0
 }
 
 # ------------------- Snake ---------------------
@@ -270,7 +268,6 @@ draw_food() {
   local fx=${FOOD%%,*}
   local fy=${FOOD##*,}
   move_to $((2+fy)) $((LEFT_BORDER_W + fx*CELL_W)); printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
 }
 
 ########################################
@@ -377,7 +374,7 @@ move_to() {
   if command -v tput >/dev/null 2>&1; then
     tput cup "$1" "$2"
   else
-    printf "[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"
+    printf "\033[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"
   fi
 }
 
