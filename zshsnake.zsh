@@ -590,17 +590,6 @@ read_input() {
   fi
 }
 
-rand_dir() {
-  local r=$((RANDOM%4))
-  case $r in
-    0) dx=1; dy=0;;
-    1) dx=-1; dy=0;;
-    2) dx=0; dy=1;;
-    3) dx=0; dy=-1;;
-  esac
-  want_dx=$dx; want_dy=$dy
-}
-
 set_want() {
   local ndx=$1 ndy=$2
   if (( ndx == -dx && ndy == -dy )); then
