@@ -2,7 +2,7 @@
 
 A retro snake game for your terminal, written in pure Zsh with no external dependencies.
 
-[![asciicast](https://asciinema.org/a/CTKQCBNLEw2L5ggwheVPwv4pZ.svg)](https://asciinema.org/a/CTKQCBNLEw2L5ggwheVPwv4pZ)
+![demo](https://github.com/user-attachments/assets/c0b8123e-16c4-4088-8211-c6b67b20367d)
 
 ## Requirements
 - Zsh 5.8+
