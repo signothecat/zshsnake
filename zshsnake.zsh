@@ -121,7 +121,27 @@ set_want() {
 read_input() {
   local k rest third
   if read -k 1 -s -t 0.05 k 2>/dev/null; then
-    if [[ $state == GAMEOVER ]]; then
+        if [[ $state == START_MENU ]]; then
+      case "$k" in
+        s|S)
+          state="PLAYING"
+          init_snake
+          return
+          ;;
+        q|Q)
+          clear_screen
+          exit 0
+          ;;
+        $'\e')  # drain ESC sequence = allow
+          read -k 1 -s -t 0.02 rest  2>/dev/null || return
+          read -k 1 -s -t 0.02 third 2>/dev/null || true
+          return
+          ;;
+        *)  # ignore other keys
+          return
+          ;;
+      esac
+    elif [[ $state == GAMEOVER ]]; then
       case "$k" in
         r|R)
           state="PLAYING"
@@ -141,7 +161,12 @@ read_input() {
           clear_screen
           exit 0
           ;;
-        *)
+        $'\e')  # drain ESC sequence = allow
+          read -k 1 -s -t 0.02 rest  2>/dev/null || return
+          read -k 1 -s -t 0.02 third 2>/dev/null || true
+          return
+          ;;
+        *)  # ignore other keys
           return
           ;;
       esac
