@@ -21,12 +21,22 @@ GRID_PIX_W=$(( GRID_W * CELL_W ))
 LEFT_BORDER_W=${LEFT_BORDER_W:-2}
 # right border padding (spaces BEFORE the right bar). 1 => render "|", 2 => render " |"
 RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
-TICK_MS=${SNAKE_TICK_MS:-70}
+TICK_MS=${SNAKE_TICK_MS:-50}
 SCORE=${SCORE:-0}
+
+# ANSI Color Codes (for reference)
+# 0 = Black
+# 1 = Red
+# 2 = Green
+# 3 = Yellow
+# 4 = Blue
+# 5 = Magenta
+# 6 = Cyan
+# 7 = White
 
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
-  COLOR_SNAKE=$(tput setaf 2)
+  COLOR_SNAKE=$(tput setaf 6)
   COLOR_TEXT=$(tput setaf 7)
   COLOR_BORDER=$(tput setaf 4)
   COLOR_FIELD=$(tput setaf 7)
@@ -42,14 +52,14 @@ fi
 
 ########################################
 
-#  Color Initialization
+#  Snake Head Color Initialization
 
 ########################################
 
 # head color (magenta)
 if [[ -z "${COLOR_HEAD:-}" ]]; then
   if command -v tput >/dev/null 2>&1; then
-    COLOR_HEAD=$(tput setaf 5)
+    COLOR_HEAD=$(tput setaf 4)
   else
     COLOR_HEAD=""
   fi
@@ -145,6 +155,7 @@ draw_menu() {
   local row=3
   move_to $row 0;   printf "%s%s%s\n" "$COLOR_TEXT" "$title" "$COLOR_RESET"
   move_to $((row+2)) 0; printf "|  %s%s  |  %s%s  |\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
 # ------------------- Game Screen ------------------------
@@ -160,6 +171,7 @@ draw_header() {
   move_to 0 0; clear_eol; printf "%s%s%s %s| Score: %d%s" \
     "$COLOR_TEXT" "$title" "$COLOR_RESET" \
     "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
 # field borders
@@ -179,6 +191,7 @@ draw_borders() {
   draw_food
   move_to $((GRID_H+3)) 0; printf "%s[p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
   BORDERS_DRAWN=1
+  move_to $((GRID_H+3)) 0
 }
 
 # play screen
@@ -257,6 +270,7 @@ draw_food() {
   local fx=${FOOD%%,*}
   local fy=${FOOD##*,}
   move_to $((2+fy)) $((LEFT_BORDER_W + fx*CELL_W)); printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
 ########################################
@@ -560,15 +574,18 @@ set_want() {
 
 show_paused() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "%sPAUSED%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
 clear_paused() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "░░░░░░"
+  move_to $((GRID_H+3)) 0
 }
 
 show_gameover() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 5)); printf "%sGAME OVER%s" "$COLOR_TEXT" "$COLOR_RESET"
   move_to $((GRID_H+3)) 0; clear_eol; printf "%s[r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
 ########################################
