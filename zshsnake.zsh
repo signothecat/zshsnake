@@ -590,11 +590,16 @@ read_input() {
   fi
 }
 
+# Update the desired direction (want_dx, want_dy) based on player input
 set_want() {
   local ndx=$1 ndy=$2
+
+  # Prevent reversing direction directly (snake cannot go back into itself)
   if (( ndx == -dx && ndy == -dy )); then
     return
   fi
+
+  # Only accept direction changes after the first move has done
   if (( FIRST_STEP_DONE == 1 )); then
     want_dx=$ndx; want_dy=$ndy
   fi
