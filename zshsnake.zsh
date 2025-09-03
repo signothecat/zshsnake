@@ -16,11 +16,6 @@ set -o pipefail  # Fail if any command in a pipeline fails
 GRID_W=24
 GRID_H=20
 
-# ----------------- Characters ---------------------
-
-FIELD_CH=${FIELD_CH:-$'░'}
-SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
-
 # -------------- Constants / Variables-----------------
 
 # Width of a single grid cell in terminal characters (default: 2)
@@ -40,6 +35,11 @@ TICK_MS=${SNAKE_TICK_MS:-110}
 
 # Score variable
 SCORE=${SCORE:-0}
+
+# ----------------- Characters ---------------------
+
+FIELD_CH=${FIELD_CH:-$'░'}
+SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
 
 # ------------------- Colors ----------------------
 
