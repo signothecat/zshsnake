@@ -1,21 +1,29 @@
 # zshsnake 🐍
 
-**Classic snake game in your terminal, written in pure Zsh.**
+A retro snake game for your terminal, written in pure Zsh with no external dependencies.
 
-This is a tiny experiment to bring the nostalgic snake game into your terminal using only Zsh.
+![demo](https://github.com/user-attachments/assets/c0b8123e-16c4-4088-8211-c6b67b20367d)
+
+## Requirements
+- Zsh 5.8+
+- `stty` and `tput` (ncurses)  
+  *Falls back to ANSI escape sequences if `tput` is not available.*
 
 ## Features
-- Runs entirely in **pure Zsh**
-- 15x15 fixed grid
-- Start screen, auto-moving snake
-- Control with **arrow keys**, **WASD**, or **hjkl**
-- Minimal dependencies: works on macOS/Linux terminal with `tput` and `stty`
+- Play with ⬅️⬆️⬇️➡️ **arrow keys**, **W/A/S/D**, or **h/j/k/l**
+- Runs on macOS and Linux terminals
+- Lightweight and dependency-free
+
+### Notes
+The snake body is rendered using Unicode block characters (`■`).  
+On ASCII-only terminals, the display may be misaligned or garbled.  
+This limitation is currently WIP.  
 
 ## Installation
 
 Clone this repository and make the script executable:
 
-```bash
+```zsh
 git clone https://github.com/signothecat/zshsnake.git
 cd zshsnake
 chmod +x zshsnake.zsh
@@ -23,19 +31,19 @@ chmod +x zshsnake.zsh
 
 Run directly:
 
-```bash
+```zsh
 ./zshsnake.zsh
 ```
 
 Optionally install globally:
 
-```bash
+```zsh
 cp zshsnake.zsh /usr/local/bin/zshsnake
 ```
 
 Now you can just run:
 
-```bash
+```zsh
 zshsnake
 ```
 
@@ -44,16 +52,28 @@ zshsnake
 - **s**: Start game (on start screen)  
 - **q**: Quit  
 - **↑ ↓ ← → / WASD / hjkl**: Move the snake  
-- Snake moves automatically — you just steer it!  
+- Snake moves automatically — you just steer it!
 
-> *Note*: At this stage, the game is still a prototype (no food, no score, no game over yet).  
+## FAQ
 
-## Roadmap
-- [ ] Add food and score counter  
-- [ ] Implement self-collision detection  
-- [ ] Game over screen with restart option  
-- [ ] Random wall-turning behavior  
-- [ ] Pause and restart keys (`p`, `r`)  
+### How can I uninstall zshsnake?
+
+If you cloned the repository locally, simply delete the `zshsnake` folder with:
+
+```zsh
+rm -rf zshsnake
+```
+
+If you installed it globally by copying to `/usr/local/bin`, remove it with:
+
+```zsh
+sudo rm /usr/local/bin/zshsnake
+```
+
+## Contributing
+
+This project is still a work in progress.  
+If you'd like to help improve compatibility, refine gameplay, or add new features, contributions are very welcome! 🙏
 
 ## License
 MIT License © 2025 signothecat

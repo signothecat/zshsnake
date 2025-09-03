@@ -1,258 +1,717 @@
 #!/usr/bin/env zsh
-# Snake (Zsh) - minimal prototype: Start screen + auto-move + direction change
-# - Fixed grid 15x15
-# - Start screen: 's' to start, 'q' to quit
-# - Playing: auto forward, arrow/WASD/hjkl to turn (no reverse), 'q' quits
-# - Full redraw each frame (simple + reliable)
-# - NO food/score/collisions yet (to be added later)
+# zshsnake.zsh — prototype
 
-set -o errexit
-set -o nounset
-set -o pipefail
+set -o errexit   # Exit immediately if a command fails
+set -o nounset   # Treat unset variables as an error
+set -o pipefail  # Fail if any command in a pipeline fails
 
-# ------------------------ Config ------------------------
-GRID_W=30
-GRID_H=15
-# horizontal cell width (characters). Increase to compensate tall line height
+########################################
+
+# Config / Constants
+
+########################################
+
+# ---------- Play Area Width and Height ------------
+
+GRID_W=24
+GRID_H=20
+
+# -------------- Constants / Variables-----------------
+
+# Width of a single grid cell in terminal characters (default: 2)
 CELL_W=${CELL_W:-2}
-# cell strings (empty and snake). SNAKE_CELL is a full cell with padding to CELL_W
-EMPTY_CELL="$(printf "%*s" "$CELL_W" "")"
-SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
-TICK_MS=${SNAKE_TICK_MS:-100}   # frame time in ms
 
-# Colors via tput (fallback to no color)
+# Total grid width in terminal characters (GRID_W cells * CELL_W characters per cell)
+GRID_PIX_W=$(( GRID_W * CELL_W ))
+
+# left border padding (spaces AFTER the bar). 2 => render "| "
+LEFT_BORDER_W=${LEFT_BORDER_W:-2}
+
+# right border padding (spaces BEFORE the bar). 1 => render "|", 2 => render " |"
+RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
+
+# Play Speed
+TICK_MS=${SNAKE_TICK_MS:-100}
+
+# Score variable
+SCORE=${SCORE:-0}
+
+# Text attributes (bold on/off). Use \e[1m for bold and \e[22m to turn bold off
+BOLD_ON=$'\e[1m'
+BOLD_OFF=$'\e[22m'
+
+# ----------------- Characters ---------------------
+
+FIELD_CH=${FIELD_CH:-$'░'}
+SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
+
+# ------------------- Colors ----------------------
+
+# ANSI Color Codes (for reference)
+# 0 = Black
+# 1 = Red
+# 2 = Green
+# 3 = Yellow
+# 4 = Blue
+# 5 = Magenta
+# 6 = Cyan
+# 7 = White
+
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
-  COLOR_SNAKE=$(tput setaf 2)   # green
-  COLOR_TEXT=$(tput setaf 7)    # white/gray
+  COLOR_SNAKE=$(tput setaf 4)
+  COLOR_TEXT=$(tput setaf 7)
+  COLOR_BORDER=$(tput setaf 4)
+  COLOR_FIELD=$(tput setaf 7)
+  COLOR_FOOD=$(tput setaf 3)
 else
   COLOR_RESET=""
   COLOR_SNAKE=""
   COLOR_TEXT=""
+  COLOR_BORDER=""
+  COLOR_FIELD=""
+  COLOR_FOOD=""
 fi
 
-# ------------------------ Terminal control ------------------------
+########################################
+
+#  Snake Head Color Initialization
+
+########################################
+
+# head color
+if [[ -z "${COLOR_HEAD:-}" ]]; then
+  if command -v tput >/dev/null 2>&1; then
+    COLOR_HEAD=$(tput setaf 2)
+  else
+    COLOR_HEAD=""
+  fi
+fi
+
+########################################
+
+# Runtime State (mutable globals)
+# - Current game mode and per-frame flags
+# - Snake body and movement vectors
+# - Logic -> Render handoff flags
+
+########################################
+
+state="START_MENU"        # current game state
+NEED_REDRAW=0             # request full redraw
+BORDERS_DRAWN=0           # borders drawn (lazy init)
+FIRST_STEP_DONE=0         # first movement completed
+
+typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""    # incremental draw keys
+typeset -g FOOD=""                                        # "x,y" or empty
+typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0 DEATH_CAUSE=""  # logic→render flags + cause of death
+
+typeset -a snake
+snake=()                    # body as ["x,y", ...]
+dx=1; dy=0                  # current direction
+want_dx=1; want_dy=0        # desired direction (from input)
+
+########################################
+
+# Terminal Controls
+
+########################################
+
 restore_term() {
-  # restore cursor + terminal mode
   printf "%s" "${COLOR_RESET}"
-  command -v tput >/dev/null 2>&1 && tput cnorm || true
+  if command -v tput >/dev/null 2>&1; then
+    tput cnorm
+  fi
   stty sane 2>/dev/null || true
 }
 
 setup_term() {
-  # noncanonical, no-echo, hide cursor
   stty -echo -icanon time 0 min 0 2>/dev/null || true
-  command -v tput >/dev/null 2>&1 && tput civis || true
-}
-
-on_exit() {
-  restore_term
-}
-
-trap on_exit EXIT INT TERM
-
-# ------------------------ Utility ------------------------
-msleep() {
-  # sleep milliseconds (integer)
-  local ms=${1:-100}
-  # use usleep if available for finer granularity
-  if command -v perl >/dev/null 2>&1; then
-    perl -e 'select undef, undef, undef, $ARGV[0]/1000' "$ms"
-  else
-    # fallback (coarse)
-    local s=$(printf "%s" "$ms" | awk '{printf "%.3f", $1/1000}')
-    sleep "$s"
+  if command -v tput >/dev/null 2>&1; then
+    tput civis
   fi
 }
 
-# Map (x,y) to key string "x,y"
-pos_key() { printf "%d,%d" "$1" "$2"; }
-
-# ------------------------ Game state ------------------------
-state="START_MENU"  # START_MENU | PLAYING
-
-# Snake represented as array of "x,y" strings, head at index 1
-typeset -a snake
-snake=()
-
-# Direction vector (dx, dy): up(0,-1), down(0,1), left(-1,0), right(1,0)
-dx=1; dy=0  # will be randomized at game start
-
-# Input buffer (single latest intent)
-want_dx=1; want_dy=0
-
-rand_dir() {
-  # pick one of four directions uniformly
-  local r=$((RANDOM%4))
-  case $r in
-    0) dx=1; dy=0;;   # right
-    1) dx=-1; dy=0;;  # left
-    2) dx=0; dy=1;;   # down
-    3) dx=0; dy=-1;;  # up
-  esac
-  want_dx=$dx; want_dy=$dy
+# Cleanup handler: ensure screen is cleared and terminal is restored
+on_exit() {
+  clear_screen
+  restore_term
 }
 
+# Always run cleanup on exit or interruption
+trap on_exit EXIT INT TERM
+
+########################################
+
+# Drawing Logic
+
+########################################
+
+# ----------------- Clear Functions ---------------------
+
+# Clear the entire terminal screen and move cursor to top-left
+clear_screen() {
+  if command -v tput >/dev/null 2>&1; then
+    tput clear
+    tput cup 0 0
+  else
+    printf "\033[2J\033[H"
+  fi
+}
+
+# Clear from cursor position to the end of the current line
+clear_eol() {
+  if command -v tput >/dev/null 2>&1; then
+    tput el
+  else
+    printf "\033[K"
+  fi
+}
+
+# ------------------- Menu Screen ----------------------
+
+# Draw start menu screen (title and available key hints)
+draw_start() {
+  local title="Zsh Snake"
+  local hint1="[s] Start"
+  local hint2="[q] Quit"
+  local row=3
+  move_to $row 0; printf "%s%s%s%s\n" "$COLOR_TEXT" "$BOLD_ON" "$title" "$BOLD_OFF"
+  move_to $((row+2)) 0; printf "|  %s%s  |  %s%s  |\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
+}
+
+# ------------------- Game Screen ------------------------
+
+# helpers to render borders consistently with widths
+render_left_border() { printf "│ "; }
+render_right_border() { printf "│"; }
+DRAW_TOP_LEN() { echo $(( GRID_PIX_W + LEFT_BORDER_W + RIGHT_BORDER_W - 2 )); }
+
+# game screen's header: title + score
+draw_header() {
+  local title="Zsh Snake"
+  move_to 0 0; clear_eol; printf "%s%s%s%s %s| Score: %d%s" \
+    "$COLOR_TEXT" "$BOLD_ON" "$title" "$BOLD_OFF" \
+    "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
+}
+
+# field borders
+draw_borders() {
+  local title="Zsh Snake"
+  # top line: score placeholder
+  draw_header
+  # top/bottom borders: extend by LEFT_BORDER_W + RIGHT_BORDER_W - 1 to keep right edge aligned
+  local top_len=$(DRAW_TOP_LEN)
+  move_to 1 0; printf "┌"; draw_repeat "─" "$top_len"; printf "┐"
+  move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$top_len"; printf "┘"
+  for (( y=0; y<GRID_H; y++ )); do
+  move_to $((2+y)) 0; render_left_border # left border with padding after bar
+  move_to $((2+y)) $((LEFT_BORDER_W + GRID_PIX_W)); render_right_border # right border with optional leading spaces
+  done
+  # bottom line: keybinding help moved here
+  draw_food
+  move_to $((GRID_H+3)) 0; printf "%s[p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+  BORDERS_DRAWN=1
+}
+
+# play screen
+draw_play() {
+  clear_screen
+  draw_borders
+  typeset -A occ; occ=()
+  local p
+  for p in ${snake[@]}; do occ[$p]=1; done
+  local headk=${snake[-1]}
+  local y x key row col
+  for (( y=0; y<GRID_H; y++ )); do
+    row=$((2+y))
+    for (( x=0; x<GRID_W; x++ )); do
+      col=$((LEFT_BORDER_W + x*CELL_W))
+      key=$(pos_key $x $y)
+      move_to $row $col
+      if [[ -n ${occ[$key]:-} ]]; then
+        if [[ $key == $headk ]]; then
+          printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
+        else
+          printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+        fi
+      elif [[ $key == $FOOD ]]; then
+        printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
+      else
+        printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+      fi
+    done
+  done
+}
+
+# ------------------- Snake ---------------------
+
+draw_step() {
+  # Draw borders once (lazy initialization)
+  if (( ! BORDERS_DRAWN )); then
+    draw_borders
+  fi
+
+  local tail=$1
+  local head=$2
+
+  # Erase the tail cell if it moved
+  if [[ -n $tail ]]; then
+    local tx=${tail%%,*}
+    local ty=${tail##*,}
+    move_to $((2+ty)) $((LEFT_BORDER_W + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+  fi
+
+  # Recolor previous head (now part of body) if it wasn't erased
+  if [[ -n ${LAST_PREV_HEAD} && ${LAST_PREV_HEAD} != ${tail} ]]; then
+    local px=${LAST_PREV_HEAD%%,*}
+    local py=${LAST_PREV_HEAD##*,}
+    move_to $((2+py)) $((LEFT_BORDER_W + px*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+  fi
+
+  # Draw the new head in specified color
+  local hx=${head%%,*}
+  local hy=${head##*,}
+  move_to $((2+hy)) $((LEFT_BORDER_W + hx*CELL_W)); printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
+
+  # Ensure new food is drawn right away
+  draw_food
+
+  # Move cursor below field (avoid leaving cursor inside)
+  move_to $((GRID_H+3)) 0
+}
+
+# ---------------------- Food -------------------------
+
+# random spawning food
+draw_food() {
+  [[ -z ${FOOD} ]] && return
+  local fx=${FOOD%%,*}
+  local fy=${FOOD##*,}
+  move_to $((2+fy)) $((LEFT_BORDER_W + fx*CELL_W)); printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
+}
+
+########################################
+
+# Game State Logic
+
+########################################
+
 init_snake() {
-  # center-start 3 segments horizontally
   local cx=$((GRID_W/2))
   local cy=$((GRID_H/2))
   snake=( $(pos_key $((cx-1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx+1)) $cy) )
-  rand_dir
+  dx=1; dy=0; want_dx=$dx; want_dy=$dy
+  LAST_TAIL=""; LAST_HEAD=""; SCORE=0
+  NEED_REDRAW=1
+  BORDERS_DRAWN=0
+  FIRST_STEP_DONE=0
+  # reset logic to render flags
+  ATE=0; COLLIDED=0; SCORE_DIRTY=0; DEATH_CAUSE=""
+  # (re)spawn food ...
+  FOOD=""
+  spawn_food
 }
 
-# ------------------------ Input handling ------------------------
-# Read any pending key(s); non-blocking. Sets want_dx/want_dy or handles commands
+# Place new food on a random free cell of the grid
+spawn_food() {
+  # Create an associative array to mark occupied positions
+  typeset -A occ; occ=()
+  local s
+  # Mark all snake body cells as occupied
+  for s in ${snake[@]}; do occ[$s]=1; done
+
+  # Calculate number of free cells
+  local free=$(( GRID_W*GRID_H - ${#snake[@]} ))
+  if (( free <= 0 )); then
+    # No space left → no food can be spawned
+    FOOD=""
+    return
+  fi
+  local x y k
+  while true; do
+    # Pick a random cell coordinate
+    x=$((RANDOM % GRID_W))
+    y=$((RANDOM % GRID_H))
+    k=$(pos_key $x $y)
+    # If the cell is not occupied by the snake, place food there
+    if [[ -z ${occ[$k]:-} ]]; then
+      FOOD=$k
+      break
+    fi
+  done
+}
+
+# Update snake position and state for one tick
+# Update snake position and state for one tick
+update_snake() {
+  # Reset per-tick flags (COLLIDED kept for backward compatibility)
+  ATE=0; DEATH_CAUSE=""; COLLIDED=0
+
+  # Get current tail and head positions
+  local tail=${snake[1]}
+  local head=${snake[-1]}
+  local hx=${head%%,*}
+  local hy=${head##*,}
+
+  # Calculate new head position
+  local nx=$((hx + dx))
+  local ny=$((hy + dy))
+
+  # --- Wall collision ---
+  if (( nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H )); then
+    DEATH_CAUSE="WALL"; COLLIDED=1
+    return
+  fi
+
+  # Convert new position to key
+  local new=$(pos_key $nx $ny)
+
+  # --- Food check ---
+  if [[ -n $FOOD && $new == $FOOD ]]; then
+    ATE=1
+  fi
+
+  # --- Self-collision ---
+  # Build occupancy map (allow stepping into the current tail if not eating)
+  typeset -A occ; occ=()
+  local s
+  for s in ${snake[@]}; do occ[$s]=1; done
+  if (( ! ATE )); then unset 'occ[$tail]'; fi
+  if [[ -n ${occ[$new]:-} ]]; then
+    DEATH_CAUSE="SELF"; COLLIDED=1
+    return
+  fi
+
+  # --- Normal update flow ---
+  snake+=$new
+  if (( ATE )); then
+    # Snake grows: tail remains
+    LAST_TAIL=""
+    SCORE=$((SCORE+1))
+    SCORE_DIRTY=1
+  else
+    # Snake moves: drop the tail
+    snake=(${snake[@]:1})
+    LAST_TAIL=$tail
+  fi
+
+  # Update head tracking
+  LAST_PREV_HEAD=$head
+  LAST_HEAD=$new
+  FIRST_STEP_DONE=1
+
+  # Spawn new food if eaten
+  if (( ATE )); then
+    spawn_food
+  fi
+}
+
+
+# Apply the desired direction (want_dx, want_dy) to the current movement (dx, dy)
+apply_direction() { dx=$want_dx; dy=$want_dy; }
+
+########################################
+
+# Utility Helpers
+
+########################################
+
+# Helper functions for positions, movement, and timing
+
+# Current time in milliseconds (robust across environments)
+now_ms() {
+  # Prefer zsh/datetime's EPOCHREALTIME if available
+  if zmodload -e zsh/datetime 2>/dev/null || zmodload zsh/datetime 2>/dev/null; then
+    printf '%.0f' "$(( EPOCHREALTIME * 1000 ))"
+    return
+  fi
+  # Fallback: Perl High-Resolution timer
+  if command -v perl >/dev/null 2>&1; then
+    perl -MTime::HiRes -e 'printf("%d", int(Time::HiRes::time()*1000))'
+    return
+  fi
+  # Fallback: zsh printf epoch seconds (no ms precision)
+  if printf '%(%s)T' -1 >/dev/null 2>&1; then
+    printf '%s000' "$(printf '%(%s)T' -1)"
+    return
+  fi
+  # Last resort
+  date +%s 2>/dev/null | awk '{printf "%s000", $1}'
+}
+
+draw_repeat() {
+  local ch="$1" n=$2
+  local s
+  s=$(printf "%*s" "$n" "")
+  s=${s// /$ch}
+  printf "%s" "$s"
+}
+
+# Convert (x, y) grid coordinates into a "x,y" string key
+pos_key() { printf "%d,%d" "$1" "$2"; }
+
+# Move the terminal cursor to the given (row, col) position
+move_to() {
+  if command -v tput >/dev/null 2>&1; then
+    tput cup "$1" "$2"
+  else
+    printf "\033[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"
+  fi
+}
+
+# Sleep for a given number of milliseconds (uses Perl if available, otherwise awk + sleep)
+msleep() {
+  local ms=${1:-100}  # Get the first argument as milliseconds (default: 100)
+  if command -v perl >/dev/null 2>&1; then  # If 'perl' command is available
+    perl -e 'select undef, undef, undef, $ARGV[0]/1000' "$ms"  # Use Perl to sleep for ms/1000 seconds
+  else
+    local s
+    s=$(printf "%s" "$ms" | awk '{printf "%.3f", $1/1000}')  # Convert ms to seconds with 3 decimals using awk (just divides ms by 1000)
+    sleep "$s"  # Sleep using 'sleep' command (seconds)
+  fi
+}
+
+########################################
+
+# Input Handler
+
+########################################
+
 read_input() {
-  local k rest
-  # read one char non-blocking
-  if read -k 1 -s -t 0.001 k 2>/dev/null; then
-    # Arrow keys: ESC [ A/B/C/D
+  local k rest third
+  if read -k 1 -s -t 0 k 2>/dev/null; then
+        if [[ $state == START_MENU ]]; then
+      case "$k" in
+        s|S)
+          state="PLAYING"
+          init_snake
+          return
+          ;;
+        q|Q)
+          clear_screen
+          exit 0
+          ;;
+        $'\e')  # drain ESC sequence = allow
+          read -k 1 -s -t 0.02 rest  2>/dev/null || return
+          read -k 1 -s -t 0.02 third 2>/dev/null || true
+          return
+          ;;
+        *)  # ignore other keys
+          return
+          ;;
+      esac
+    elif [[ $state == GAMEOVER ]]; then
+      case "$k" in
+        r|R)
+          state="PLAYING"
+          init_snake
+          return
+          ;;
+        b|B)
+          state="START_MENU"
+          clear_screen
+          draw_start
+          NEED_REDRAW=0
+          BORDERS_DRAWN=0
+          FIRST_STEP_DONE=0
+          return
+          ;;
+        q|Q)
+          clear_screen
+          exit 0
+          ;;
+        $'\e')  # drain ESC sequence = allow
+          read -k 1 -s -t 0.02 rest  2>/dev/null || return
+          read -k 1 -s -t 0.02 third 2>/dev/null || true
+          return
+          ;;
+        *)  # ignore other keys
+          return
+          ;;
+      esac
+    elif [[ $state == PAUSED ]]; then
+      case "$k" in
+        q|Q)
+          clear_screen
+          exit 0
+          ;;
+        p|P|$' ')
+          state="PLAYING"
+          clear_paused
+          return
+          ;;
+        b|B)
+          state="START_MENU"
+          clear_screen
+          draw_start
+          NEED_REDRAW=0
+          BORDERS_DRAWN=0
+          FIRST_STEP_DONE=0
+          return
+          ;;
+        r|R)
+          state="PLAYING"
+          init_snake
+          return
+          ;;
+        $'\e')  # drain ESC sequence allow
+          read -k 1 -s -t 0.02 rest  2>/dev/null || return
+          read -k 1 -s -t 0.02 third 2>/dev/null || true
+          return
+          ;;
+        *)  # ignore other keys
+          return
+          ;;
+      esac
+    fi
     if [[ $k == $'\e' ]]; then
       if read -k 1 -s -t 0.0001 rest 2>/dev/null && [[ $rest == "[" ]]; then
         if read -k 1 -s -t 0.0001 rest 2>/dev/null; then
           case "$rest" in
-            A) set_want 0 -1;; # up
-            B) set_want 0 1;;  # down
-            C) set_want 1 0;;  # right
-            D) set_want -1 0;; # left
+            A) [[ $state == PLAYING ]] && set_want 0 -1;;  # UP arrow
+            B) [[ $state == PLAYING ]] && set_want 0 1;;   # DOWN arrow
+            C) [[ $state == PLAYING ]] && set_want 1 0;;   # RIGHT arrow
+            D) [[ $state == PLAYING ]] && set_want -1 0;;  # LEFT arrow
           esac
         fi
       fi
       return
     fi
-
     case "$k" in
       q|Q)
+        clear_screen
         exit 0;;
-      s|S)
-        if [[ $state == START_MENU ]]; then
+      p|P|" ")
+        if [[ $state == "PLAYING" ]]; then
+          state="PAUSED"
+          show_paused
+        elif [[ $state == "PAUSED" ]]; then
           state="PLAYING"
-          init_snake
+          clear_paused
         fi
         ;;
-      # WASD
-      w|W) set_want 0 -1;;
-      s|S) set_want 0 1;;
-      a|A) set_want -1 0;;
-      d|D) set_want 1 0;;
-      # hjkl
-      h|H) set_want -1 0;;
-      j|J) set_want 0 1;;
-      k|K) set_want 0 -1;;
-      l|L) set_want 1 0;;
+      r|R)
+        state="PLAYING"
+        init_snake
+        return
+        ;;
+      s|S)
+        if [[ $state == START_MENU ]]; then
+          state="PLAYING"; init_snake; return
+        elif [[ $state == PLAYING ]]; then
+          set_want 0 1                                 # DOWN
+        fi
+        ;;
+      w|W) [[ $state == PLAYING ]] && set_want 0 -1;;  # UP
+      a|A) [[ $state == PLAYING ]] && set_want -1 0;;  # LEFT
+      d|D) [[ $state == PLAYING ]] && set_want 1 0;;   # RIGHT
+      h|H) [[ $state == PLAYING ]] && set_want -1 0;;  # LEFT
+      j|J) [[ $state == PLAYING ]] && set_want 0 1;;   # DOWN
+      k|K) [[ $state == PLAYING ]] && set_want 0 -1;;  # UP
+      l|L) [[ $state == PLAYING ]] && set_want 1 0;;   # RIGHT
+      b|B)
+        if [[ $state == "PLAYING" || $state == "PAUSED" ]]; then
+          state="START_MENU"
+          clear_screen
+          draw_start
+          NEED_REDRAW=0
+          BORDERS_DRAWN=0
+          FIRST_STEP_DONE=0
+        fi
+        ;;
     esac
   fi
 }
 
-# Apply desired direction if not reverse
+# Update the desired direction (want_dx, want_dy) based on player input
 set_want() {
   local ndx=$1 ndy=$2
-  # forbid direct reverse (dx,dy) -> (-dx,-dy)
+
+  # Prevent reversing direction directly (snake cannot go back into itself)
   if (( ndx == -dx && ndy == -dy )); then
     return
   fi
-  want_dx=$ndx; want_dy=$ndy
+
+  # Only accept direction changes after the first move has done
+  if (( FIRST_STEP_DONE == 1 )); then
+    want_dx=$ndx; want_dy=$ndy
+  fi
 }
 
-apply_direction() {
-  dx=$want_dx; dy=$want_dy
+########################################
+
+# State Overlays (Paused / Game Over)
+
+########################################
+
+show_paused() {
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "%sPAUSED%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
-# ------------------------ Update & Draw ------------------------
-step_snake() {
-  # move head by (dx,dy); wrap around edges for prototype
-  local head=${snake[-1]}
-  local hx=${head%%,*}
-  local hy=${head##*,}
-  local nx=$(( (hx + dx + GRID_W) % GRID_W ))
-  local ny=$(( (hy + dy + GRID_H) % GRID_H ))
-  # push new head
-  snake+=$(pos_key $nx $ny)
-  # remove tail to keep length constant
-  snake=(${snake[@]:1})
+clear_paused() {
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 3)); printf "░░░░░░"
+  move_to $((GRID_H+3)) 0
 }
 
-clear_screen() { command -v tput >/dev/null 2>&1 && tput clear || printf "\033[2J\033[H"; }
-move_to() { command -v tput >/dev/null 2>&1 && tput cup "$1" "$2" || printf "\033[%d;%dH" "$(( $1 + 1 ))" "$(( $2 + 1 ))"; }
-
-# draw header + grid (■ for all cells; snake colored)
-draw_play() {
-  clear_screen
-  # Header (row 0)
-  move_to 0 0; printf "%s↑↓←→ / WASD / hjkl | q:Quit%s\n" "$COLOR_TEXT" "$COLOR_RESET"
-
-  # Precompute occupancy map for O(1) lookup
-  typeset -A occ; occ=()
-  local p
-  for p in ${snake[@]}; do occ[$p]=1; done
-
-  # Grid origin at row 1
-  local y x key
-  for y in {0..$((GRID_H-1))}; do
-    move_to $((1+y)) 0
-    for x in {0..$((GRID_W-1))}; do
-      key=$(pos_key $x $y)
-      if [[ -n ${occ[$key]:-} ]]; then
-        move_to $row $((x*CELL_W))
-        printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
-      else
-        move_to $row $((x*CELL_W))
-        printf "%s" "$EMPTY_CELL"
-      fi
-    done
-    printf "\n"
-  done
-
-  # Park cursor outside the grid (some terminals scroll on last-column writes)
-  move_to $((GRID_H+1)) 0
+show_gameover() {
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + GRID_PIX_W/2 - 5)); printf "%sGAME OVER%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0; clear_eol; printf "%s[r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((GRID_H+3)) 0
 }
 
-# diff draw: erase old tail, draw new head only
-draw_step() {
-  local tail=$1
-  local head=$2
-  # erase tail (default cell)
-  local tx=${tail%%,*}
-  local ty=${tail##*,}
-  move_to $((ty+1)) $((tx*CELL_W)); printf "%s" "$EMPTY_CELL"
-  # draw head (snake color)
-  local hx=${head%%,*}
-  local hy=${head##*,}
-  move_to $((hy+1)) $((hx*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
-  move_to $((GRID_H+1)) 0
-}
+########################################
 
-draw_start() {
-  clear_screen
-  local title="Snake (Zsh)"
-  local hint1="s: Start"
-  local hint2="q: Quit"
-  # simple centered-ish layout
-  local row=3
-  move_to $row 0;   printf "%s%s%s\n" "$COLOR_TEXT" "$title" "$COLOR_RESET"
-  move_to $((row+2)) 0; printf "%s%s    %s%s\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
-}
+# Main Loop
 
-# ------------------------ Main loop ------------------------
+########################################
+
 main() {
   setup_term
+  clear_screen
   draw_start
-
   while true; do
+    local frame_start_ms=$(now_ms)
     read_input
     case $state in
       START_MENU)
-        # idle; just poll input
         ;;
       PLAYING)
-        apply_direction
-        step_snake
-        draw_play
+        if (( NEED_REDRAW )); then
+          draw_play
+          NEED_REDRAW=0
+        else
+          apply_direction
+          update_snake
+          if [[ -n $DEATH_CAUSE ]]; then
+            state="GAMEOVER"
+            show_gameover
+          else
+            # mark first step only once, after the first successful move
+            if (( FIRST_STEP_DONE == 0 )); then
+              FIRST_STEP_DONE=1
+            fi
+            draw_step "$LAST_TAIL" "$LAST_HEAD"
+            (( SCORE_DIRTY )) && { draw_header; SCORE_DIRTY=0; }
+          fi
+        fi
         ;;
-    esac
-    msleep "$TICK_MS"
+      PAUSED)
+        ;;
+      GAMEOVER)
+        ;;
+    esac    # frame pacing: sleep only the remaining time of TICK_MS after work this tick
+    {
+      local frame_end_ms=$(now_ms)
+      local elapsed=$(( frame_end_ms - frame_start_ms ))
+      local remain=$(( TICK_MS - elapsed ))
+      (( remain > 0 )) && msleep "$remain"
+    }
   done
 }
 
+# ---- Entry point: start the game by calling main() ------
 main "$@"
