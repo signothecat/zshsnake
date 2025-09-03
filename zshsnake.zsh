@@ -91,8 +91,8 @@ rand_dir() {
 init_snake() {
   local cx=$((GRID_W/2))
   local cy=$((GRID_H/2))
-  snake=( $(pos_key $((cx+1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx-1)) $cy) )
-  dx=-1; dy=0; want_dx=$dx; want_dy=$dy
+  snake=( $(pos_key $((cx-1)) $cy) $(pos_key $cx $cy) $(pos_key $((cx+1)) $cy) )
+  dx=1; dy=0; want_dx=$dx; want_dy=$dy
   LAST_TAIL=""; LAST_HEAD=""
   NEED_REDRAW=1
   BORDERS_DRAWN=0
