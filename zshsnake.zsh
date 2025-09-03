@@ -292,20 +292,28 @@ init_snake() {
   spawn_food
 }
 
+# Place new food on a random free cell of the grid
 spawn_food() {
+  # Create an associative array to mark occupied positions
   typeset -A occ; occ=()
   local s
+  # Mark all snake body cells as occupied
   for s in ${snake[@]}; do occ[$s]=1; done
+
+  # Calculate number of free cells
   local free=$(( GRID_W*GRID_H - ${#snake[@]} ))
   if (( free <= 0 )); then
+    # No space left → no food can be spawned
     FOOD=""
     return
   fi
   local x y k
   while true; do
+    # Pick a random cell coordinate
     x=$((RANDOM % GRID_W))
     y=$((RANDOM % GRID_H))
     k=$(pos_key $x $y)
+    # If the cell is not occupied by the snake, place food there
     if [[ -z ${occ[$k]:-} ]]; then
       FOOD=$k
       break
@@ -313,35 +321,54 @@ spawn_food() {
   done
 }
 
+# Update snake position and state for one tick
 update_snake() {
   # reset per-tick flags
   ATE=0; COLLIDED=0
+
+  # Get current tail and head positions
   local tail=${snake[1]}
   local head=${snake[-1]}
   local hx=${head%%,*}
   local hy=${head##*,}
+
+  # Calculate new head position
   local nx=$((hx + dx))
   local ny=$((hy + dy))
+
+  # Check for wall collision
   if (( nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H )); then
     COLLIDED=1
     return
   fi
+
+  # Convert new position to key
   local new=$(pos_key $nx $ny)
+
+  # Check if food is eaten
   if [[ -n $FOOD && $new == $FOOD ]]; then
     ATE=1
   fi
+
+  # Add new head to the snake
   snake+=$new
+
   if (( ATE )); then
+    # Snake grows: tail remains
     LAST_TAIL=""
     SCORE=$((SCORE+1))
     SCORE_DIRTY=1
   else
+    # Snake moves: drop the tail
     snake=(${snake[@]:1})
     LAST_TAIL=$tail
   fi
+
+  # Update head tracking
   LAST_PREV_HEAD=$head
   LAST_HEAD=$new
-  FIRST_STEP_DONE=1
+
+  # Spawn new food if eaten
   if (( ATE )); then
     spawn_food
   fi
@@ -494,7 +521,7 @@ read_input() {
           init_snake
           return
           ;;
-        $'\e')  # drain ESC sequence = allow
+        $'\e')  # drain ESC sequence allow
           read -k 1 -s -t 0.02 rest  2>/dev/null || return
           read -k 1 -s -t 0.02 third 2>/dev/null || true
           return
@@ -539,16 +566,16 @@ read_input() {
         if [[ $state == START_MENU ]]; then
           state="PLAYING"; init_snake; return
         elif [[ $state == PLAYING ]]; then
-          set_want 0 1
+          set_want 0 1                                 # DOWN
         fi
         ;;
-      w|W) [[ $state == PLAYING ]] && set_want 0 -1;;
-      a|A) [[ $state == PLAYING ]] && set_want -1 0;;
-      d|D) [[ $state == PLAYING ]] && set_want 1 0;;
-      h|H) [[ $state == PLAYING ]] && set_want -1 0;;
-      j|J) [[ $state == PLAYING ]] && set_want 0 1;;
-      k|K) [[ $state == PLAYING ]] && set_want 0 -1;;
-      l|L) [[ $state == PLAYING ]] && set_want 1 0;;
+      w|W) [[ $state == PLAYING ]] && set_want 0 -1;;  # UP
+      a|A) [[ $state == PLAYING ]] && set_want -1 0;;  # LEFT
+      d|D) [[ $state == PLAYING ]] && set_want 1 0;;   # RIGHT
+      h|H) [[ $state == PLAYING ]] && set_want -1 0;;  # LEFT
+      j|J) [[ $state == PLAYING ]] && set_want 0 1;;   # DOWN
+      k|K) [[ $state == PLAYING ]] && set_want 0 -1;;  # UP
+      l|L) [[ $state == PLAYING ]] && set_want 1 0;;   # RIGHT
       b|B)
         if [[ $state == "PLAYING" || $state == "PAUSED" ]]; then
           state="START_MENU"
@@ -633,6 +660,10 @@ main() {
             state="GAMEOVER"
             show_gameover
           else
+            # mark first step only once, after the first successful move
+            if (( FIRST_STEP_DONE == 0 )); then
+              FIRST_STEP_DONE=1
+            fi
             draw_step "$LAST_TAIL" "$LAST_HEAD"
             (( SCORE_DIRTY )) && { draw_header; SCORE_DIRTY=0; }
           fi
