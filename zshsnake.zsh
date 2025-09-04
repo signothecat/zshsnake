@@ -20,13 +20,45 @@ GRID_H=14
 # Play Speed (smaller number = faster, default is 100)
 TICK_MS=${SNAKE_TICK_MS:-130}
 
-# ----------------- Char Numbers -------------------
-
+# ---------------- CELL_W ---------------------
 # Width of a single grid cell in terminal characters
 CELL_W=${CELL_W:-2}
 
+# ----------------- Cells ---------------------
+# █ / ▓ / ▒ / ░ / ■
+
+# field (must have same char count as CELL_W)
+FIELD_CELL=${FIELD_CELL:-$'░░'}
+
+# snake
+SNAKE_CELL_CHAR=${SNAKE_CELL_CHAR:-"■ "}  # char count must be 1 or 2
+SNAKE_CELL="$(printf "%-${CELL_W}s" "$SNAKE_CELL_CHAR")"  # Pad with spaces to fit CELL_W if necessary
+
+# snake cell char choices (must have same char count as CELL_W)
+SNAKE_CELL_CHAR_SQ=${SNAKE_CELL_CHAR_SQ:-"■ "}         # default
+SNAKE_CELL_CHAR_FILL=${SNAKE_CELL_CHAR_FILL:-"██"}
+SNAKE_CELL_CHAR_DEEP=${SNAKE_CELL_CHAR_DEEP:-"▓▓"}
+SNAKE_CELL_CHAR_MEDIUM=${SNAKE_CELL_CHAR_MEDIUM:-"▒▒"}
+SNAKE_CELL_CHAR_LIGHT=${SNAKE_CELL_CHAR_LIGHT:-"░░"}
+
+# field char choices (must have same char count as CELL_W)
+FIELD_CELL_CHAR_FILL=${SNAKE_CELL_CHAR_FILL:-"██"}
+FIELD_CELL_CHAR_DEEP=${SNAKE_CELL_CHAR_DEEP:-"▓▓"}
+FIELD_CELL_CHAR_MEDIUM=${SNAKE_CELL_CHAR_MEDIUM:-"▒▒"}
+FIELD_CELL_CHAR_LIGHT=${SNAKE_CELL_CHAR_LIGHT:-"░░"}   # default
+FIELD_CELL_CHAR_BLANK=${SNAKE_CELL_CHAR_BLANK:-"  "}
+
+# borders (must be consistent with BORDER_W and BORDER_P)
+LEFT_BORDER_CHAR=${LEFT_BORDER_CHAR:-"│ "}
+RIGHT_BORDER_CHAR=${RIGHT_BORDER_CHAR:-" │"}
+
+# ----------------- Char Numbers -------------------
+
 # border width (bar)
 LEFT_BORDER_W=${LEFT_BORDER_W:-1}
+
+# border height
+BORDER_H=${BORDER_H:-1}  # fixed
 
 # border padding (spaces)
 LEFT_BORDER_P=${LEFT_BORDER_P:-1}
@@ -35,16 +67,17 @@ RIGHT_BORDER_P=${RIGHT_BORDER_P:-1}
 # Total grid width in terminal characters (GRID_W cells * CELL_W characters per cell)
 GRID_PIX_W=$(( GRID_W * CELL_W ))
 
-# ----------------- Characters ---------------------
-# All cells must have same char count as CELL_W
-# █ / ▓ / ▒ / ░ / ■
+# header height
+HEADER_H=${HEADER_H:-2}  # fixed
 
-# field
-FIELD_CELL=${FIELD_CELL:-$'░░'}
+# box height
+BOX_H=$(( BORDER_H * 2 + GRID_H ))  # GRID_H + 2
 
-# snake
-SNAKE_CELL_CHAR=${SNAKE_CELL_CHAR:-"■ "}
-SNAKE_CELL="$(printf "%-${CELL_W}s" "$SNAKE_CELL_CHAR")"  # Pad with spaces to fit CELL_W if necessary
+BOX_LEN=$(( GRID_PIX_W + LEFT_BORDER_P + RIGHT_BORDER_P ))
+
+# Footer height
+FOOTER_H_PLAY=${FOOTER_H_PLAY:-2}  # in play. fixed.
+FOOTER_H_GAMEOVER=${FOOTER_H_GAMEOVER:-1}  # in game over screen. fixed.
 
 # ------------------- Colors ----------------------
 
@@ -174,52 +207,53 @@ clear_eol() {
 # Draw start menu screen (title and available key hints)
 draw_start() {
   local title="Zsh Snake"
-  local hint1="[s] Start"
-  local hint2="[q] Quit"
-  local row=3
-  move_to $row 0; printf "%s%s%s%s\n" "$COLOR_TEXT" "$BOLD_ON" "$title" "$BOLD_OFF"
-  move_to $((row+2)) 0; printf "|  %s%s  |  %s%s  |\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
+  local hint1="[s]Start"
+  local hint2="[q]Quit"
+  move_to 0 0; printf "%s%s%s" "$COLOR_TEXT" "$title" "$COLOR_RESET"
+  move_to 1 0; printf "%s%s %s%s\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
 }
 
 # ------------------- Game Screen ------------------------
 
-# helpers to render borders consistently with widths
-render_left_border() { printf "│ "; }
-render_right_border() { printf " │"; }
-DRAW_TOP_LEN() { echo $(( GRID_PIX_W + LEFT_BORDER_P + RIGHT_BORDER_P )); }
-
 # game screen's header: title + score
 draw_header() {
   local title="Zsh Snake"
-  move_to 0 0; clear_eol; printf "%s%s%s%s %s| Score: %d%s" \
-    "$COLOR_TEXT" "$BOLD_ON" "$title" "$BOLD_OFF" \
-    "$COLOR_TEXT" "$SCORE" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
+  move_to 0 0; clear_eol; printf "%s%s%s" \
+    "$COLOR_TEXT" "$title" "$COLOR_RESET"
+  move_to 1 0; clear_eol; printf "%s%sScore: %d%s%s" \
+    "$COLOR_TEXT" "$BOLD_ON" "$SCORE" "$BOLD_OFF" "$COLOR_RESET"
 }
 
 # field borders
 draw_borders() {
-  local title="Zsh Snake"
-  # top line: score placeholder
-  draw_header
-  # top / bottom borders: extend by DRAW_TOP_LEN to keep right edge aligned
-  local top_len=$(DRAW_TOP_LEN)
-  move_to 1 0; printf "┌"; draw_repeat "─" "$top_len"; printf "┐"
-  move_to $((GRID_H+2)) 0; printf "└"; draw_repeat "─" "$top_len"; printf "┘"
+  # reference global variables
+  local box_len=$((BOX_LEN))  # to use for
+  local header_h=$((HEADER_H)) border_h=$((BORDER_H))
+  local l_border_w=$((LEFT_BORDER_W)) l_border_p=$((LEFT_BORDER_P)) grid_pix_w=$((GRID_PIX_W))
+
+  # top / bottom borders: extend by BOX_LEN
+  move_to $((header_h)) 0; printf "┌"; draw_repeat "─" "$box_len"; printf "┐"
+  move_to $((header_h + border_h + GRID_H)) 0; printf "└"; draw_repeat "─" "$box_len"; printf "┘"
+
+  # left / right borders
   for (( y=0; y<GRID_H; y++ )); do
-  move_to $((2+y)) 0; render_left_border # left border with padding after bar
-  move_to $((2+y)) $((LEFT_BORDER_W + LEFT_BORDER_P + GRID_PIX_W)); render_right_border # right border with optional leading spaces
+    move_to $((header_h + border_h + y)) 0; printf "%s" "$LEFT_BORDER_CHAR"
+    move_to $((header_h + border_h + y)) $((l_border_w + l_border_p + grid_pix_w)); printf "%s" "$RIGHT_BORDER_CHAR"
   done
-  # bottom line: keybinding help moved here
-  draw_food
-  move_to $((GRID_H+3)) 0; printf "%s[p/space]Pause, [r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+
+  draw_food  # will be moved to appropriate section
+
+  # bottom: keybinding help moved here
+  move_to $((HEADER_H + BOX_H)) 0; printf "%s[p/space]Toggle Pause%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((HEADER_H + BOX_H + 1)) 0; printf "%s[r]Retry | [b]Back | [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+
   BORDERS_DRAWN=1
 }
 
 # play screen
 draw_play() {
   clear_screen
+  draw_header
   draw_borders
   typeset -A occ; occ=()
   local p
@@ -227,7 +261,7 @@ draw_play() {
   local headk=${snake[-1]}
   local y x key row col
   for (( y=0; y<GRID_H; y++ )); do
-    row=$((2+y))
+    row=$((3+y))
     for (( x=0; x<GRID_W; x++ )); do
       col=$((LEFT_BORDER_W + LEFT_BORDER_P + x*CELL_W))
       key=$(pos_key $x $y)
@@ -262,26 +296,26 @@ draw_step() {
   if [[ -n $tail ]]; then
     local tx=${tail%%,*}
     local ty=${tail##*,}
-    move_to $((2+ty)) $((LEFT_BORDER_W + LEFT_BORDER_P + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CELL" 1; printf "%s" "$COLOR_RESET"
+    move_to $((HEADER_H + BORDER_H + ty)) $((LEFT_BORDER_W + LEFT_BORDER_P + tx*CELL_W)); printf "%s%s%s" "$COLOR_FIELD" "$FIELD_CELL" "$COLOR_RESET"
   fi
 
   # Recolor previous head (now part of body) if it wasn't erased
   if [[ -n ${LAST_PREV_HEAD} && ${LAST_PREV_HEAD} != ${tail} ]]; then
     local px=${LAST_PREV_HEAD%%,*}
     local py=${LAST_PREV_HEAD##*,}
-    move_to $((2+py)) $((LEFT_BORDER_W + LEFT_BORDER_P + px*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
+    move_to $((HEADER_H + BORDER_H + py)) $((LEFT_BORDER_W + LEFT_BORDER_P + px*CELL_W)); printf "%s%s%s" "$COLOR_SNAKE" "$SNAKE_CELL" "$COLOR_RESET"
   fi
 
   # Draw the new head in specified color
   local hx=${head%%,*}
   local hy=${head##*,}
-  move_to $((2+hy)) $((LEFT_BORDER_W + LEFT_BORDER_P + hx*CELL_W)); printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
+  move_to $((HEADER_H + BORDER_H + hy)) $((LEFT_BORDER_W + LEFT_BORDER_P + hx*CELL_W)); printf "%s%s%s" "$COLOR_HEAD" "$SNAKE_CELL" "$COLOR_RESET"
 
-  # Ensure new food is drawn right away
+  # Ensure new food is drawn right away (maybe should be moved to more appropriate section)
   draw_food
 
   # Move cursor below field (avoid leaving cursor inside)
-  move_to $((GRID_H+3)) 0
+  move_to $((HEADER_H + BOX_H + FOOTER_H_PLAY)) 0
 }
 
 # ---------------------- Food -------------------------
@@ -291,7 +325,7 @@ draw_food() {
   [[ -z ${FOOD} ]] && return
   local fx=${FOOD%%,*}
   local fy=${FOOD##*,}
-  move_to $((2+fy)) $((LEFT_BORDER_W + LEFT_BORDER_P + fx*CELL_W)); printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
+  move_to $((HEADER_H + BORDER_H + fy)) $((LEFT_BORDER_W + LEFT_BORDER_P + fx*CELL_W)); printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
 }
 
 ########################################
@@ -345,7 +379,6 @@ spawn_food() {
   done
 }
 
-# Update snake position and state for one tick
 # Update snake position and state for one tick
 update_snake() {
   # Reset per-tick flags (COLLIDED kept for backward compatibility)
@@ -650,18 +683,19 @@ set_want() {
 
 show_paused() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + LEFT_BORDER_P + GRID_PIX_W/2 - 3)); printf "%sPAUSED%s" "$COLOR_TEXT" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
+  move_to $((HEADER_H + BOX_H + FOOTER_H_PLAY)) 0
 }
 
 clear_paused() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + LEFT_BORDER_P + GRID_PIX_W/2 - 3)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CELL" 6; printf "%s" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
+  move_to $((HEADER_H + BOX_H + FOOTER_H_PLAY)) 0
 }
 
 show_gameover() {
   move_to $((GRID_H/2)) $((LEFT_BORDER_W + LEFT_BORDER_P + GRID_PIX_W/2 - 5)); printf "%sGAME OVER%s" "$COLOR_TEXT" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0; clear_eol; printf "%s[r]Retry, [b]Back to Menu, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
-  move_to $((GRID_H+3)) 0
+  move_to $((HEADER_H + BOX_H)) 0; clear_eol; printf "%s[r]Retry, [b]Back, [q]Quit%s" "$COLOR_TEXT" "$COLOR_RESET"
+  move_to $((HEADER_H + BOX_H + 1)) 0; clear_eol
+  move_to $((HEADER_H + BOX_H + FOOTER_H_GAMEOVER)) 0
 }
 
 ########################################
