@@ -64,13 +64,13 @@ zshsnake
 
 ### How can I uninstall zshsnake?
 
-If you cloned the repository locally, simply delete the `zshsnake` folder with:
+If you cloned the repository locally, simply delete the `zshsnake` folder.
 
 ```zsh
 rm -rf zshsnake
 ```
 
-If you installed it globally by copying to `/usr/local/bin`, remove it with:
+If you installed it globally by copying to `/usr/local/bin`, remove it.
 
 ```zsh
 sudo rm /usr/local/bin/zshsnake
