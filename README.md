@@ -1,8 +1,8 @@
-# zshsnake 🐍
+# zshsnake
 
-<img width="359" height="218" alt="title" src="https://github.com/user-attachments/assets/2200e15d-870f-4de9-88e9-1a58e4fb63dd" />
+<img width="200" alt="title" src="https://github.com/user-attachments/assets/2200e15d-870f-4de9-88e9-1a58e4fb63dd" />
 
-A retro snake game for your terminal, written in pure Zsh with no external dependencies.
+**A retro snake game for your terminal**
 
 ## Gameplay
 <img src="https://github.com/user-attachments/assets/274ec216-55f1-4e37-9ec0-eaf1074db9ad" width="50%">
