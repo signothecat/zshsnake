@@ -1,4 +1,4 @@
-<img width="200" alt="title" src="https://github.com/user-attachments/assets/2200e15d-870f-4de9-88e9-1a58e4fb63dd" />
+<img width="400" alt="title" src="https://github.com/user-attachments/assets/2200e15d-870f-4de9-88e9-1a58e4fb63dd" />
 
 # zshsnake
 
