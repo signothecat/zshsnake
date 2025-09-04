@@ -654,7 +654,7 @@ show_paused() {
 }
 
 clear_paused() {
-  move_to $((GRID_H/2)) $((LEFT_BORDER_W + LEFT_BORDER_P + GRID_PIX_W/2 - 3)); printf "░░░░░░"
+  move_to $((GRID_H/2)) $((LEFT_BORDER_W + LEFT_BORDER_P + GRID_PIX_W/2 - 3)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CELL" 6; printf "%s" "$COLOR_RESET"
   move_to $((GRID_H+3)) 0
 }
 
