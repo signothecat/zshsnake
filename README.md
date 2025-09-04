@@ -4,23 +4,20 @@
 
 **A retro snake game for your terminal**
 
-## Gameplay
 <img src="https://github.com/user-attachments/assets/274ec216-55f1-4e37-9ec0-eaf1074db9ad" width="50%">
-
-## Requirements
-- Zsh 5.8+
-- `stty` and `tput` (ncurses)  
-  *Falls back to ANSI escape sequences if `tput` is not available.*
 
 ## Features
 - Play with ⬅️⬆️⬇️➡️ **arrow keys**, **W/A/S/D**, or **h/j/k/l**
 - Runs on macOS and Linux terminals
 - Lightweight and dependency-free
 
-### Notes
-The snake body is rendered using Unicode block characters (`■`).  
-On ASCII-only terminals, the display may be misaligned or garbled.  
-This limitation is currently WIP.  
+## Requirements
+- Zsh 5.8+
+- `stty` and `tput` (ncurses)  
+  *Falls back to ANSI escape sequences if `tput` is not available.*
+
+Notes:
+The snake body is rendered using Unicode block characters (`■`). On ASCII-only terminals, the display may be misaligned or garbled. This limitation is currently WIP.  
 
 ## Installation
 
