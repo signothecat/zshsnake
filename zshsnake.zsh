@@ -40,7 +40,7 @@ GRID_PIX_W=$(( GRID_W * CELL_W ))
 # █ / ▓ / ▒ / ░ / ■
 
 # field
-FIELD_CELL=${FIELD_CELL:-$'▓▓'}
+FIELD_CELL=${FIELD_CELL:-$'░░'}
 
 # snake
 SNAKE_CELL_CHAR=${SNAKE_CELL_CHAR:-"■ "}
@@ -64,7 +64,7 @@ if command -v tput >/dev/null 2>&1; then
   COLOR_HEAD=$(tput setaf 2)
   COLOR_TEXT=$(tput setaf 7)
   COLOR_BORDER=$(tput setaf 4)
-  COLOR_FIELD=$(tput setaf 0)
+  COLOR_FIELD=$(tput setaf 2)
   COLOR_FOOD=$(tput setaf 3)
 else
   COLOR_RESET=""
