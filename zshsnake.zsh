@@ -69,6 +69,7 @@ if command -v tput >/dev/null 2>&1; then
 else
   COLOR_RESET=""
   COLOR_SNAKE=""
+  COLOR_HEAD=""
   COLOR_TEXT=""
   COLOR_BORDER=""
   COLOR_FIELD=""
