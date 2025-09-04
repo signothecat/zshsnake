@@ -1,10 +1,21 @@
-# zshsnake
-
 <img width="200" alt="title" src="https://github.com/user-attachments/assets/2200e15d-870f-4de9-88e9-1a58e4fb63dd" />
+
+# zshsnake
 
 **A retro snake game for your terminal**
 
 <img src="https://github.com/user-attachments/assets/274ec216-55f1-4e37-9ec0-eaf1074db9ad" width="50%">
+
+## Table of Contents
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Local Install](#local-install)
+  - [Global Install](#global-install)
+- [FAQ](#faq)
+  - [How can I uninstall zshsnake?](#how-can-i-uninstall-zshsnake)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 - Play with ⬅️⬆️⬇️➡️ **arrow keys**, **W/A/S/D**, or **h/j/k/l**
@@ -21,39 +32,33 @@ The snake body is rendered using Unicode block characters (`■`). On ASCII-only
 
 ## Installation
 
-### 1. Clone the repository
+### Local Install
+
+Clone the repository:
 ```zsh
 git clone https://github.com/signothecat/zshsnake.git
 cd zshsnake
-```
-
-### 2. Make the script executable
-```zsh
 chmod +x zshsnake.zsh
 ```
 
-### 3. Run the game
+Run the game:
 ```zsh
 ./zshsnake.zsh
 ```
 
-## (Optional) Global Installation
+### Global Install
 
+Clone the repository:
 ```zsh
+git clone https://github.com/signothecat/zshsnake.git
+cd zshsnake
 sudo cp zshsnake.zsh /usr/local/bin/zshsnake
 ```
 
-Now you can start the game simply by:
+Run the game:
 ```zsh
 zshsnake
 ```
-
-## How to Play
-
-- **s**: Start game (on start screen)  
-- **q**: Quit  
-- **↑ ↓ ← → / WASD / hjkl**: Move the snake  
-- Snake moves automatically — you just steer it!
 
 ## FAQ
 
@@ -74,7 +79,7 @@ sudo rm /usr/local/bin/zshsnake
 ## Contributing
 
 This project is still a work in progress.  
-If you'd like to help improve compatibility, refine gameplay, or add new features, contributions are very welcome! 🙏
+Issues or pull requests are very welcome! 🙏
 
 ## License
 MIT License © 2025 signothecat
