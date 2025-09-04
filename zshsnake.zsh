@@ -7,50 +7,48 @@ set -o pipefail  # Fail if any command in a pipeline fails
 
 ########################################
 
-# Config / Constants
+# Config
 
 ########################################
 
-# ---------- Play Area Width and Height ------------
+# ---------- Game Play Settings ------------
 
-GRID_W=24
-GRID_H=20
+# Play Area Width and Height
+GRID_W=16
+GRID_H=14
 
-# -------------- Constants / Variables-----------------
+# Play Speed (smaller number = faster, default is 100)
+TICK_MS=${SNAKE_TICK_MS:-130}
 
-# Width of a single grid cell in terminal characters (default: 2)
+# ----------------- Char Numbers -------------------
+
+# Width of a single grid cell in terminal characters
 CELL_W=${CELL_W:-2}
+
+# border width (bar)
+LEFT_BORDER_W=${LEFT_BORDER_W:-1}
+
+# border padding (spaces)
+LEFT_BORDER_P=${LEFT_BORDER_P:-1}
+RIGHT_BORDER_P=${RIGHT_BORDER_P:-1}
 
 # Total grid width in terminal characters (GRID_W cells * CELL_W characters per cell)
 GRID_PIX_W=$(( GRID_W * CELL_W ))
 
-# left border width (bar).
-LEFT_BORDER_W=${LEFT_BORDER_W:-1}
-
-# left border padding (spaces).
-LEFT_BORDER_P=${LEFT_BORDER_P:-1}
-
-# right border padding (spaces).
-RIGHT_BORDER_P=${RIGHT_BORDER_P:-1}
-
-# Play Speed
-TICK_MS=${SNAKE_TICK_MS:-100}
-
-# Score variable
-SCORE=${SCORE:-0}
-
-# Text attributes (bold on/off). Use \e[1m for bold and \e[22m to turn bold off
-BOLD_ON=$'\e[1m'
-BOLD_OFF=$'\e[22m'
-
 # ----------------- Characters ---------------------
+# All cells must have same char count as CELL_W
+# █ / ▓ / ▒ / ░ / ■
 
-FIELD_CH=${FIELD_CH:-$'░'}
-SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
+# field
+FIELD_CELL=${FIELD_CELL:-$'▓▓'}
+
+# snake
+SNAKE_CELL_CHAR=${SNAKE_CELL_CHAR:-"■ "}
+SNAKE_CELL="$(printf "%-${CELL_W}s" "$SNAKE_CELL_CHAR")"  # Pad with spaces to fit CELL_W if necessary
 
 # ------------------- Colors ----------------------
 
-# ANSI Color Codes (for reference)
+# ANSI Color Codes
 # 0 = Black
 # 1 = Red
 # 2 = Green
@@ -63,9 +61,10 @@ SNAKE_CELL="■$(printf "%*s" "$((CELL_W-1))" "")"
 if command -v tput >/dev/null 2>&1; then
   COLOR_RESET=$(tput sgr0)
   COLOR_SNAKE=$(tput setaf 2)
+  COLOR_HEAD=$(tput setaf 2)
   COLOR_TEXT=$(tput setaf 7)
   COLOR_BORDER=$(tput setaf 4)
-  COLOR_FIELD=$(tput setaf 7)
+  COLOR_FIELD=$(tput setaf 0)
   COLOR_FOOD=$(tput setaf 3)
 else
   COLOR_RESET=""
@@ -78,18 +77,16 @@ fi
 
 ########################################
 
-#  Snake Head Color Initialization
+# Constants / Variables
 
 ########################################
 
-# head color
-if [[ -z "${COLOR_HEAD:-}" ]]; then
-  if command -v tput >/dev/null 2>&1; then
-    COLOR_HEAD=$(tput setaf 4)
-  else
-    COLOR_HEAD=""
-  fi
-fi
+# Score variable
+SCORE=${SCORE:-0}
+
+# Text bold
+BOLD_ON=$'\e[1m'
+BOLD_OFF=$'\e[22m'
 
 ########################################
 
@@ -243,7 +240,7 @@ draw_play() {
       elif [[ $key == $FOOD ]]; then
         printf "%s%s%s" "$COLOR_FOOD" "$SNAKE_CELL" "$COLOR_RESET"
       else
-        printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+        printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CELL" 1; printf "%s" "$COLOR_RESET"
       fi
     done
   done
@@ -264,7 +261,7 @@ draw_step() {
   if [[ -n $tail ]]; then
     local tx=${tail%%,*}
     local ty=${tail##*,}
-    move_to $((2+ty)) $((LEFT_BORDER_W + LEFT_BORDER_P + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CH" "$CELL_W"; printf "%s" "$COLOR_RESET"
+    move_to $((2+ty)) $((LEFT_BORDER_W + LEFT_BORDER_P + tx*CELL_W)); printf "%s" "$COLOR_FIELD"; draw_repeat "$FIELD_CELL" 1; printf "%s" "$COLOR_RESET"
   fi
 
   # Recolor previous head (now part of body) if it wasn't erased
