@@ -10,31 +10,31 @@
 
 ## Table of Contents(目次)
 
-- [Features(特徴)](#features)
-- [Requirements(要件)](#requirements)
-- [Installation(インストール方法)](#installation)
-  - [Local Install(直接ファイルを読み込んで遊ぶ)](#local-install)
-  - [Global Install(グローバルにインストールする)](#global-install)
-- [FAQ(よくある質問)](#faq)
-  - [How can I uninstall zsnake?(アンインストール方法を教えて)](#how-can-i-uninstall-zsnake)
-- [Contributing(コントリビュート)](#contributing)
-- [License(ライセンス)](#license)
+- [特長](#特長)
+- [システム要件](#システム要件)
+- [インストール手順](#インストール手順)
+  - [ローカル実行(簡単)](#ローカル実行簡単)
+  - [グローバルにインストール(どこでも遊べる)](#グローバルにインストールどこでも遊べる)
+- [よくある質問](#よくある質問)
+  - [アンインストールするには？](#アンインストールするには)
+- [Contributing](#contributing)
+- [License(ライセンス)](#licenseライセンス)
 
-## Features(特徴)
+## 特長
 
 - 矢印キー ⬅️⬆️⬇️➡️、**W/A/S/D**キー、もしくは**h/j/k/l**キーで遊べます
 - zsh で動作します
 
-## Requirements(要件)
+## システム要件
 
 - Zsh 5.8 以上が必要です
 
 注記：ゲーム画面描画には、Unicode 文字（`■`）を使用しています。ASCII のみの環境では、表示がずれたり
 文字化けしたりする可能性があります。
 
-## Installation(インストール方法)
+## インストール手順
 
-### Local Install(直接ファイルを読み込んで遊ぶ)
+### ローカル実行(簡単)
 
 リポジトリをクローンし、クローンされたディレクトリに移動します:
 
@@ -54,7 +54,7 @@ cd zsnake
 zsh zsnake.zsh
 ```
 
-### Global Install(グローバルにインストールする)
+### グローバルにインストール(どこでも遊べる)
 
 リポジトリをクローンします:
 
@@ -75,7 +75,7 @@ sudo cp zsnake.zsh /usr/local/bin/zsnake
 zsnake
 ```
 
-## FAQ(よくある質問)
+## よくある質問
 
 ### How can I uninstall zsnake?(アンインストール方法を教えて)
 
@@ -91,7 +91,7 @@ rm -rf zsnake
 sudo rm /usr/local/bin/zsnake
 ```
 
-## Contributing(コントリビュート)
+## Contributing
 
 このプロジェクトは現在進行系でプログラミング初心者の signothecat が作成しています。新しいアイデアの
 提案や問題点の報告など、もし頂けたらとても有り難いです。(Issue、Pull Request 大歓迎です！) プレイ報
