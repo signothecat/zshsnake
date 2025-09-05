@@ -138,7 +138,7 @@ FIRST_STEP_DONE=0         # first movement completed
 
 typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""    # incremental draw keys
 typeset -g FOOD=""                                        # "x,y" or empty
-typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0 DEATH_CAUSE=""  # logic→render flags + cause of death
+typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0 DEATH_CAUSE=""  # logic->render flags + cause of death
 
 typeset -a snake
 snake=()                    # body as ["x,y", ...]
@@ -361,7 +361,7 @@ spawn_food() {
   # Calculate number of free cells
   local free=$(( GRID_W*GRID_H - ${#snake[@]} ))
   if (( free <= 0 )); then
-    # No space left → no food can be spawned
+    # No space left -> no food can be spawned
     FOOD=""
     return
   fi
