@@ -93,7 +93,9 @@ sudo rm /usr/local/bin/zsnake
 
 ## Contributing
 
-This project is still a work in progress. Issues or pull requests are very welcome! 🙏
+This project is still a work in progress.
+
+Issues or pull requests are very welcome! 🙏
 
 ## License
 
