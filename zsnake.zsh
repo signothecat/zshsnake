@@ -70,10 +70,13 @@ GRID_PIX_W=$(( GRID_W * CELL_W ))
 # header height
 HEADER_H=${HEADER_H:-2}  # fixed
 
-# box height
+# main box size
 BOX_H=$(( BORDER_H * 2 + GRID_H ))  # GRID_H + 2
-
 BOX_LEN=$(( GRID_PIX_W + LEFT_BORDER_P + RIGHT_BORDER_P ))
+
+# side box size
+SIDE_BOX_H=$(( BORDER_H * 2 + GRID_H ))  # GRID_H + 2
+SIDE_BOX_LEN=10
 
 # Footer height
 FOOTER_H_PLAY=${FOOTER_H_PLAY:-2}  # in play. fixed.
