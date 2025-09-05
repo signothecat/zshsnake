@@ -708,7 +708,8 @@ main() {
   setup_term
   clear_screen
   draw_start
-  while true; do
+  while true  # infinity loop
+  do
     local frame_start_ms=$(now_ms)
     read_input
     case $state in
@@ -738,12 +739,12 @@ main() {
         ;;
       GAMEOVER)
         ;;
-    esac    # frame pacing: sleep only the remaining time of TICK_MS after work this tick
-    {
-      local frame_end_ms=$(now_ms)
-      local elapsed=$(( frame_end_ms - frame_start_ms ))
-      local remain=$(( TICK_MS - elapsed ))
-      (( remain > 0 )) && msleep "$remain"
+    esac
+    { # sleep ( TICK_MS - elapsed time(time spent so far) )
+      # calculate remain_ms to sleep
+      local remain_ms=$(( TICK_MS - ( $(now_ms) - frame_start_ms ) ))
+      # convert remain_ms (ms -> s) with awk then pass to sleep
+      (( remain_ms > 0 )) && sleep "$(awk -v ms=$remain_ms 'BEGIN{printf "%.3f", ms/1000}')"
     }
   done
 }
