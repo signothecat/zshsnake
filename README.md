@@ -1,4 +1,4 @@
-English | [日本語(Japanese)]()
+English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/develop/README.ja.md)
 
 <img width="400" alt="zsnake" src="https://github.com/user-attachments/assets/c50d7d2b-ae32-45fe-8dc4-9d7e4f84d186" />
 
