@@ -77,7 +77,7 @@ zsnake
 
 ## よくある質問
 
-### How can I uninstall zsnake?(アンインストール方法を教えて)
+### アンインストールするには？
 
 もし Local Install をした場合は、`zsnake`フォルダを削除してください。
 
