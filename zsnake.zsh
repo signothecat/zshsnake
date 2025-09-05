@@ -136,9 +136,9 @@ NEED_REDRAW=0             # request full redraw
 BORDERS_DRAWN=0           # borders drawn (lazy init)
 FIRST_STEP_DONE=0         # first movement completed
 
-typeset -g LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""    # incremental draw keys
-typeset -g FOOD=""                                        # "x,y" or empty
-typeset -g ATE=0 COLLIDED=0 SCORE_DIRTY=0 DEATH_CAUSE=""  # logic->render flags + cause of death
+LAST_TAIL="" LAST_HEAD="" LAST_PREV_HEAD=""    # incremental draw keys
+FOOD=""                                        # "x,y" or empty
+ATE=0 COLLIDED=0 SCORE_DIRTY=0 DEATH_CAUSE=""  # logic->render flags + cause of death
 
 typeset -a snake
 snake=()                    # body as ["x,y", ...]
