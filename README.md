@@ -16,23 +16,21 @@ English | [日本語(Japanese)]()
   - [Local Install](#local-install)
   - [Global Install](#global-install)
 - [FAQ](#faq)
-  - [How can I uninstall zshsnake?](#how-can-i-uninstall-zshsnake)
+  - [How can I uninstall zsnake?](#how-can-i-uninstall-zsnake)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Features
 
 - Play with ⬅️⬆️⬇️➡️ **arrow keys**, **W/A/S/D**, or **h/j/k/l**
-- Runs on macOS and Linux terminals
-- Lightweight and dependency-free
+- Runs on zsh
 
 ## Requirements
 
 - Zsh 5.8+
-- `stty` and `tput` (ncurses) _Falls back to ANSI escape sequences if `tput` is not available._
 
-Notes: The snake body is rendered using Unicode block characters (`■`). On ASCII-only terminals, the
-display may be misaligned or garbled. This limitation is currently WIP.
+Notes: The game is rendered using Unicode characters (`■`). On ASCII-only terminals, the display may
+be misaligned or garbled.
 
 ## Installation
 
@@ -42,14 +40,18 @@ Clone the repository:
 
 ```zsh
 git clone https://github.com/signothecat/zsnake.git
+```
+
+Move to the directory:
+
+```zsh
 cd zsnake
-chmod +x zsnake.zsh
 ```
 
 Run the game:
 
 ```zsh
-./zsnake.zsh
+zsh zsnake.zsh
 ```
 
 ### Global Install
@@ -58,6 +60,11 @@ Clone the repository:
 
 ```zsh
 git clone https://github.com/signothecat/zsnake.git
+```
+
+Copy `zsnake.zsh` as `/usr/local/bin/zsnake`:
+
+```zsh
 cd zsnake
 sudo cp zsnake.zsh /usr/local/bin/zsnake
 ```
@@ -70,7 +77,7 @@ zsnake
 
 ## FAQ
 
-### How can I uninstall zshsnake?
+### How can I uninstall zsnake?
 
 If you cloned the repository locally, simply delete the `zsnake` folder.
 
