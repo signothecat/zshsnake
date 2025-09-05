@@ -8,7 +8,7 @@
 
 <img src="https://github.com/user-attachments/assets/274ec216-55f1-4e37-9ec0-eaf1074db9ad" width="50%">
 
-## Table of Contents(目次)
+## 目次
 
 - [特長](#特長)
 - [システム要件](#システム要件)
