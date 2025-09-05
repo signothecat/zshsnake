@@ -56,6 +56,7 @@ RIGHT_BORDER_CHAR=${RIGHT_BORDER_CHAR:-" │"}
 
 # border width (bar)
 LEFT_BORDER_W=${LEFT_BORDER_W:-1}
+RIGHT_BORDER_W=${RIGHT_BORDER_W:-1}
 
 # border height
 BORDER_H=${BORDER_H:-1}  # fixed
@@ -72,11 +73,11 @@ HEADER_H=${HEADER_H:-2}  # fixed
 
 # main box size
 BOX_H=$(( BORDER_H * 2 + GRID_H ))  # GRID_H + 2
-BOX_LEN=$(( GRID_PIX_W + LEFT_BORDER_P + RIGHT_BORDER_P ))
+BOX_TOP_LEN=$(( GRID_PIX_W + LEFT_BORDER_P + RIGHT_BORDER_P ))
 
 # side box size
 SIDE_BOX_H=$(( BORDER_H * 2 + GRID_H ))  # GRID_H + 2
-SIDE_BOX_LEN=10
+SIDE_BOX_TOP_LEN=10
 
 # Footer height
 FOOTER_H_PLAY=${FOOTER_H_PLAY:-2}  # in play. fixed.
@@ -189,17 +190,19 @@ trap on_exit EXIT INT TERM
 # Clear the entire terminal screen and move cursor to top-left
 clear_screen() {
   if command -v tput >/dev/null 2>&1; then
-    tput clear
-    tput cup 0 0
+    tput clear              # clear = \E[H\E[J
+    tput cup 0 0            # cup = \E[%i%p1%d;%p2%dH
+    # %i adjusts coordinates to use (0,0) as top-left origin
+    # %p1%d and %2%d mean param1(int) and param2(int)
   else
-    printf "\033[2J\033[H"
+    printf "\033[2J\033[H"  # Control + L
   fi
 }
 
 # Clear from cursor position to the end of the current line
 clear_eol() {
   if command -v tput >/dev/null 2>&1; then
-    tput el
+    tput el           # el = \E[K
   else
     printf "\033[K"
   fi
@@ -207,22 +210,41 @@ clear_eol() {
 
 # ------------------- Menu Screen ----------------------
 
-# Draw start menu screen (title and available key hints)
-draw_start() {
-  local title="z snake"
-  local hint1="[s]Start"
-  local hint2="[q]Quit"
-  move_to 0 0; printf "%s%s%s" "$COLOR_TEXT" "$title" "$COLOR_RESET"
-  move_to 1 0; printf "%s%s %s%s\n" "$COLOR_TEXT" "$hint1" "$hint2" "$COLOR_RESET"
+# Draw title menu
+draw_title() {
+  # local title="z snake"
+  local hint1="Start(s)"
+  local hint2="Config(c)"
+  local hint3="Quit(q)"
+  # move_to 0 0; printf "%s%s%s" "$COLOR_TEXT" "$title" "$COLOR_RESET"
+  move_to 7 15; printf "%s%s%s" "$COLOR_TEXT" "$hint1" "$COLOR_RESET"
+  move_to 9 15; printf "%s%s%s" "$COLOR_TEXT" "$hint2" "$COLOR_RESET"
+  move_to 11 15; printf "%s%s%s" "$COLOR_TEXT" "$hint3" "$COLOR_RESET"
+
+  # perhaps move cursor to last line should be here
+}
+
+# Draw config menu
+draw_config() {
+  # texts
+  local clear_high_score="Erase High Score"
+  local back_to_title="Back(b)"
+  # draw
+  move_to 7 10
+    printf "%s%s%s" "$COLOR_TEXT" "$clear_high_score" "$COLOR_TEXT"
+  move_to 12 16
+    printf "%s%s%s" "$COLOR_TEXT" "$back_to_title" "$COLOR_TEXT"
+
+  # perhaps move cursor to last line should be here
 }
 
 # ------------------- Game Screen ------------------------
 
 # game screen's header: title + score
 draw_header() {
-  local title="z snake"
-  move_to 0 0; clear_eol; printf "%s%s%s" \
-    "$COLOR_TEXT" "$title" "$COLOR_RESET"
+  # local title="z snake"
+  # move_to 0 0; clear_eol; printf "%s%s%s" \
+  #   "$COLOR_TEXT" "$title" "$COLOR_RESET"
   move_to 1 0; clear_eol; printf "%s%sScore: %d%s%s" \
     "$COLOR_TEXT" "$BOLD_ON" "$SCORE" "$BOLD_OFF" "$COLOR_RESET"
 }
@@ -230,18 +252,34 @@ draw_header() {
 # field borders
 draw_borders() {
   # reference global variables
-  local box_len=$((BOX_LEN))  # to use for
+  local grid_pix_w=$((GRID_PIX_W))
+  local box_top_len=$((BOX_TOP_LEN))
+  local side_box_top_len=$((SIDE_BOX_TOP_LEN))
   local header_h=$((HEADER_H)) border_h=$((BORDER_H))
-  local l_border_w=$((LEFT_BORDER_W)) l_border_p=$((LEFT_BORDER_P)) grid_pix_w=$((GRID_PIX_W))
+  local l_border_w=$((LEFT_BORDER_W)) l_border_p=$((LEFT_BORDER_P))
+  local r_border_p=$((RIGHT_BORDER_P)) r_border_w=$((RIGHT_BORDER_W))
+  local side_box_start_x=$((l_border_w + box_top_len + r_border_w))
 
-  # top / bottom borders: extend by BOX_LEN
-  move_to $((header_h)) 0; printf "┌"; draw_repeat "─" "$box_len"; printf "┐"
-  move_to $((header_h + border_h + GRID_H)) 0; printf "└"; draw_repeat "─" "$box_len"; printf "┘"
+  # top / bottom borders: extend by BOX_TOP_LEN and SIDE_BOX_TOP_LEN
+  move_to $((header_h)) 0
+    printf "┌"; draw_repeat "─" "$box_top_len"; printf "┐"
+  move_to $((header_h)) $((side_box_start_x))
+    printf "┌"; draw_repeat "─" "$side_box_top_len"; printf "┐"
+  move_to $((header_h + border_h + GRID_H)) 0
+    printf "└"; draw_repeat "─" "$box_top_len"; printf "┘"
+  move_to $((header_h + border_h + GRID_H)) $((side_box_start_x))
+    printf "└"; draw_repeat "─" "$side_box_top_len"; printf "┘"
 
   # left / right borders
   for (( y=0; y<GRID_H; y++ )); do
-    move_to $((header_h + border_h + y)) 0; printf "%s" "$LEFT_BORDER_CHAR"
-    move_to $((header_h + border_h + y)) $((l_border_w + l_border_p + grid_pix_w)); printf "%s" "$RIGHT_BORDER_CHAR"
+    move_to $((header_h + border_h + y)) 0
+      printf "%s" "$LEFT_BORDER_CHAR"
+    move_to $((header_h + border_h + y)) $((side_box_start_x))
+      printf "%s" "$LEFT_BORDER_CHAR"
+    move_to $((header_h + border_h + y)) $((l_border_w + l_border_p + grid_pix_w))
+      printf "%s" "$RIGHT_BORDER_CHAR"
+    move_to $((header_h + border_h + y)) $((side_box_start_x + side_box_top_len))
+      printf "%s" "$RIGHT_BORDER_CHAR"
   done
 
   draw_food  # will be moved to appropriate section
@@ -550,7 +588,7 @@ read_input() {
         b|B)
           state="START_MENU"
           clear_screen
-          draw_start
+          draw_title
           NEED_REDRAW=0
           BORDERS_DRAWN=0
           FIRST_STEP_DONE=0
@@ -583,7 +621,7 @@ read_input() {
         b|B)
           state="START_MENU"
           clear_screen
-          draw_start
+          draw_title
           NEED_REDRAW=0
           BORDERS_DRAWN=0
           FIRST_STEP_DONE=0
@@ -653,7 +691,7 @@ read_input() {
         if [[ $state == "PLAYING" || $state == "PAUSED" ]]; then
           state="START_MENU"
           clear_screen
-          draw_start
+          draw_title
           NEED_REDRAW=0
           BORDERS_DRAWN=0
           FIRST_STEP_DONE=0
@@ -710,7 +748,7 @@ show_gameover() {
 main() {
   setup_term
   clear_screen
-  draw_start
+  draw_title
   while true  # infinity loop
   do
     local frame_start_ms=$(now_ms)
