@@ -206,7 +206,7 @@ clear_eol() {
 
 # Draw start menu screen (title and available key hints)
 draw_start() {
-  local title="Zsh Snake"
+  local title="z snake"
   local hint1="[s]Start"
   local hint2="[q]Quit"
   move_to 0 0; printf "%s%s%s" "$COLOR_TEXT" "$title" "$COLOR_RESET"
@@ -217,7 +217,7 @@ draw_start() {
 
 # game screen's header: title + score
 draw_header() {
-  local title="Zsh Snake"
+  local title="z snake"
   move_to 0 0; clear_eol; printf "%s%s%s" \
     "$COLOR_TEXT" "$title" "$COLOR_RESET"
   move_to 1 0; clear_eol; printf "%s%sScore: %d%s%s" \
