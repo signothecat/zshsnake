@@ -40,15 +40,15 @@ display may be misaligned or garbled. This limitation is currently WIP.
 Clone the repository:
 
 ```zsh
-git clone https://github.com/signothecat/zshsnake.git
-cd zshsnake
-chmod +x zshsnake.zsh
+git clone https://github.com/signothecat/zsnake.git
+cd zsnake
+chmod +x zsnake.zsh
 ```
 
 Run the game:
 
 ```zsh
-./zshsnake.zsh
+./zsnake.zsh
 ```
 
 ### Global Install
@@ -56,31 +56,31 @@ Run the game:
 Clone the repository:
 
 ```zsh
-git clone https://github.com/signothecat/zshsnake.git
-cd zshsnake
-sudo cp zshsnake.zsh /usr/local/bin/zshsnake
+git clone https://github.com/signothecat/zsnake.git
+cd zsnake
+sudo cp zsnake.zsh /usr/local/bin/zsnake
 ```
 
 Run the game:
 
 ```zsh
-zshsnake
+zsnake
 ```
 
 ## FAQ
 
 ### How can I uninstall zshsnake?
 
-If you cloned the repository locally, simply delete the `zshsnake` folder.
+If you cloned the repository locally, simply delete the `zsnake` folder.
 
 ```zsh
-rm -rf zshsnake
+rm -rf zsnake
 ```
 
 If you installed it globally by copying to `/usr/local/bin`, remove it.
 
 ```zsh
-sudo rm /usr/local/bin/zshsnake
+sudo rm /usr/local/bin/zsnake
 ```
 
 ## Contributing
