@@ -85,7 +85,7 @@ If you cloned the repository locally, simply delete the `zsnake` folder.
 rm -rf zsnake
 ```
 
-If you installed it globally by copying to `/usr/local/bin`, remove it.
+If you installed it globally by copying to `/usr/local/bin`, remove `/usr/local/bin/zsnake`.
 
 ```zsh
 sudo rm /usr/local/bin/zsnake
