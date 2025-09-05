@@ -1,4 +1,5 @@
-<img width="400" alt="title" src="https://github.com/user-attachments/assets/2200e15d-870f-4de9-88e9-1a58e4fb63dd" />
+<img width="400" alt="zsnake" src="https://github.com/user-attachments/assets/c50d7d2b-ae32-45fe-8dc4-9d7e4f84d186" />
+
 
 # zshsnake
 
