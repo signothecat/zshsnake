@@ -13,8 +13,8 @@ English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/devel
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
-  - [Local Run](#local-run)
-  - [Global Install](#global-install)
+  - [Local Run (Simple)](#local-run-simple)
+  - [Global Install (Play Anywhere)](#global-install-play-anywhere)
 - [FAQ](#faq)
   - [How can I uninstall zsnake?](#how-can-i-uninstall-zsnake)
 - [Contributing](#contributing)
@@ -34,7 +34,7 @@ be misaligned or garbled.
 
 ## Installation
 
-### Local Run
+### Local Run (Simple)
 
 Clone the repository:
 
@@ -54,7 +54,7 @@ Run the game:
 zsh zsnake.zsh
 ```
 
-### Global Install
+### Global Install (Play Anywhere)
 
 Clone the repository:
 
