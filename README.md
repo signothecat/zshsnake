@@ -13,7 +13,7 @@ English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/devel
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
-  - [Local Install](#local-install)
+  - [Local Run](#local-run)
   - [Global Install](#global-install)
 - [FAQ](#faq)
   - [How can I uninstall zsnake?](#how-can-i-uninstall-zsnake)
@@ -34,7 +34,7 @@ be misaligned or garbled.
 
 ## Installation
 
-### Local Install
+### Local Run
 
 Clone the repository:
 
