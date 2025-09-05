@@ -29,8 +29,8 @@ English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/devel
 
 - Zsh 5.8+
 
-Notes: The game is rendered using Unicode characters (`■`). On ASCII-only terminals, the display may
-be misaligned or garbled.
+Notes: The game is rendered using Unicode characters (`■`).\
+On ASCII-only terminals, the display may be misaligned or garbled.
 
 ## Installation
 
@@ -93,8 +93,7 @@ sudo rm /usr/local/bin/zsnake
 
 ## Contributing
 
-This project is still a work in progress.
-
+This project is still a work in progress.\
 Issues or pull requests are very welcome! 🙏
 
 ## License
