@@ -14,8 +14,8 @@ set -o pipefail  # Fail if any command in a pipeline fails
 # ---------- Game Play Settings ------------
 
 # Play Area Width and Height
-GRID_W=16
-GRID_H=14
+GRID_W=20
+GRID_H=18
 
 # Play Speed (smaller number = faster, default is 100)
 TICK_MS=${SNAKE_TICK_MS:-130}
