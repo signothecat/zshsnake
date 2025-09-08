@@ -29,8 +29,9 @@ English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/devel
 
 - Zsh 5.8+
 
-Notes: The game is rendered using Unicode characters (`■`).\
-On ASCII-only terminals, the display may be misaligned or garbled.
+Notes: The game is rendered using Unicode characters.\
+On ASCII-only terminals, the display may be misaligned or garbled.\
+(This issue is WIP)
 
 ## Installation
 
@@ -62,10 +63,15 @@ Clone the repository:
 git clone https://github.com/signothecat/zsnake.git
 ```
 
-Copy `zsnake.zsh` as `/usr/local/bin/zsnake`:
+Move to the directory:
 
 ```zsh
 cd zsnake
+```
+
+Copy `zsnake.zsh` as `/usr/local/bin/zsnake`:
+
+```zsh
 sudo cp zsnake.zsh /usr/local/bin/zsnake
 ```
 
@@ -94,7 +100,8 @@ sudo rm /usr/local/bin/zsnake
 ## Contributing
 
 This project is still a work in progress.\
-Issues or pull requests are very welcome! 🙏
+Issues or pull requests are very welcome! 🙏\
+X(Twitter): [@signothecat](https://x.com/signothecat)
 
 ## License
 

@@ -29,14 +29,14 @@
 
 - Zsh 5.8 以上が必要です
 
-注記：ゲーム画面描画には、Unicode 文字（`■`）を使用しています。\
+注記：ゲーム画面描画には、Unicode 文字を使用しています。\
 ASCII のみの環境では、表示がずれたり、文字化けしたりする可能性があります。
 
 ## インストール手順
 
 ### ローカル実行(簡単)
 
-リポジトリをクローンし、クローンされたディレクトリに移動します:
+リポジトリをクローンします:
 
 ```zsh
 git clone https://github.com/signothecat/zsnake.git
@@ -62,10 +62,15 @@ zsh zsnake.zsh
 git clone https://github.com/signothecat/zsnake.git
 ```
 
+クローンされたディレクトリに移動します:
+
+```
+cd zsnake
+```
+
 `zsnake.zsh`を、`/usr/local/bin/zsnake`としてコピーします:
 
 ```zsh
-cd zsnake
 sudo cp zsnake.zsh /usr/local/bin/zsnake
 ```
 
@@ -79,13 +84,13 @@ zsnake
 
 ### アンインストールするには？
 
-もし Local Install をした場合は、`zsnake`フォルダを削除してください。
+もし「ローカル実行」をした場合は、`zsnake`フォルダを削除してください。
 
 ```zsh
 rm -rf zsnake
 ```
 
-もし Global Install をした場合は、`/usr/local/bin`にある zsnake フォルダを削除してください。
+もし「グローバルにインストール」をした場合は、`/usr/local/bin`にある zsnake フォルダを削除してください。
 
 ```zsh
 sudo rm /usr/local/bin/zsnake
@@ -94,9 +99,10 @@ sudo rm /usr/local/bin/zsnake
 ## Contributing
 
 このプロジェクトは、`signothecat`が作成しています。\
-新しいアイデアの提案や問題点の報告など、もし頂けたらとても有り難いです。\
-(Issue、Pull Request 大歓迎です！)\
-プレイ報告などもお待ちしております！
+新しいアイデアの提案や問題点の報告など、とても有り難いです。\
+(Issue、Pull Request 大歓迎です:pray:)\
+プレイ報告・感想もお待ちしております！\
+X(Twitter): [@signothecat](https://x.com/signothecat)
 
 ## License(ライセンス)
 
