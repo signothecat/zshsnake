@@ -100,7 +100,7 @@ sudo rm /usr/local/bin/zsnake
 
 このプロジェクトは、`signothecat`が作成しています。\
 新しいアイデアの提案や問題点の報告など、とても有り難いです。\
-(Issue、Pull Request 大歓迎です:pray:)\
+(Issue、Pull Request 大歓迎です :pray:)\
 プレイ報告・感想もお待ちしております！\
 X(Twitter): [@signothecat](https://x.com/signothecat)
 
