@@ -4,7 +4,7 @@ English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/devel
 
 # zsnake
 
-**A retro snake game for your terminal**
+**A retro snake game for your terminal** :snake:
 
 <img src="https://github.com/user-attachments/assets/274ec216-55f1-4e37-9ec0-eaf1074db9ad" width="50%">
 
@@ -22,8 +22,8 @@ English | [日本語(Japanese)](https://github.com/signothecat/zsnake/blob/devel
 
 ## Features
 
+- Simple / Retro / Classic snake game
 - Play with ⬅️⬆️⬇️➡️ **arrow keys**, **W/A/S/D**, or **h/j/k/l**
-- Runs on zsh
 
 ## Requirements
 
